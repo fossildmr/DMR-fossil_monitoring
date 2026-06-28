@@ -379,7 +379,7 @@ select.form-control{cursor:pointer}
   <div style="display:flex;align-items:center;gap:10px;">
     <span id="connDot" style="display:inline-block;width:8px;height:8px;background:#f39c12;border-radius:50%;"></span>
     <strong>Google Sheets Sync</strong> <span>|</span>
-    <a href="https://docs.google.com/spreadsheets/d/1jSY3M07QVTEZRg4q6lo1Vm9VBPAvZSe6URo4yF1a0ng/edit" target="_blank" style="color:#aed6f1;text-decoration:none;font-weight:600;">📊 Sheets</a>
+    <a href="https://docs.google.com/spreadsheets/d/1mxzalXs9hhHaEaKHP0XVUCFh-h_nHW9CDS7t0A8-_xs/edit" target="_blank" style="color:#aed6f1;text-decoration:none;font-weight:600;">📊 Sheets</a>
     <a href="https://drive.google.com/drive/folders/1-Fx3ZzRXary7lyoxcj8xqliGo-OZUJwM" target="_blank" style="color:#aed6f1;text-decoration:none;font-weight:600;">📁 หลักฐาน</a>
   </div>
   <div id="gsConnStatus" style="opacity:.9;font-size:11px;">⏳ กำลังเชื่อมต่อ...</div>
@@ -819,7 +819,7 @@ select.form-control{cursor:pointer}
       <div class="card-header"><span class="card-title">🔗 Google Sheets Sync</span></div>
       <div class="card-body">
         <div class="form-group"><label class="form-label">URL Apps Script</label><input type="url" class="form-control" id="gsheetsUrl"></div>
-        <div class="form-group"><label class="form-label">Spreadsheet ID</label><input type="text" class="form-control" id="gsheetsSID"><p style="font-size:12px;margin-top:4px;"><a href="https://docs.google.com/spreadsheets/d/1jSY3M07QVTEZRg4q6lo1Vm9VBPAvZSe6URo4yF1a0ng/edit" target="_blank" style="color:var(--google);">📊 เปิด Google Sheets 🔗</a></p></div>
+        <div class="form-group"><label class="form-label">Spreadsheet ID</label><input type="text" class="form-control" id="gsheetsSID"><p style="font-size:12px;margin-top:4px;"><a href="https://docs.google.com/spreadsheets/d/1mxzalXs9hhHaEaKHP0XVUCFh-h_nHW9CDS7t0A8-_xs/edit" target="_blank" style="color:var(--google);">📊 เปิด Google Sheets 🔗</a></p></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap;">
           <button class="btn btn-google" onclick="saveGSheetsConfig()">💾 บันทึก</button>
           <button class="btn btn-outline" onclick="testGSheetsConn()">🔌 ทดสอบ</button>
@@ -906,8 +906,8 @@ select.form-control{cursor:pointer}
 // ═══════════════════════════════════════════════════
 // CONFIG
 // ═══════════════════════════════════════════════════
-const APP_URL = 'https://script.google.com/macros/s/AKfycbz4q2Vc4HZ4cbmPNeFysClRLFxHg8zEfIINRMkENCFBtUbmV6K8XS4qFeI6NHfRBZoNXw/exec';
-const SHEET_ID = '1jSY3M07QVTEZRg4q6lo1Vm9VBPAvZSe6URo4yF1a0ng';
+const APP_URL = 'https://script.google.com/macros/s/AKfycbyR33E4ke86yVY0R2ZV212vVranMarHxE6ouH9pDaLolituQHqNo_53H3g1ZsKHi1hV/exec';
+const SHEET_ID = '1mxzalXs9hhHaEaKHP0XVUCFh-h_nHW9CDS7t0A8-_xs';
 const DRIVE_FOLDER = '1-Fx3ZzRXary7lyoxcj8xqliGo-OZUJwM';
 const GAS_URL = APP_URL;
 const API_URL = APP_URL;
@@ -1410,7 +1410,7 @@ async function deleteProject(id){
 // ═══════════════════════════════════════════════════
 function refreshUpdateForm(){
   const notice=document.getElementById('gsheetsNotice');
-  if(notice)notice.innerHTML=`<div style="background:var(--google-light);border:1.5px solid var(--google);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--google);display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🔗</span><span><strong>เชื่อมต่อ Google Sheets แล้ว</strong> — ข้อมูลจะ sync อัตโนมัติ <a href="https://docs.google.com/spreadsheets/d/1jSY3M07QVTEZRg4q6lo1Vm9VBPAvZSe6URo4yF1a0ng/edit" target="_blank" style="color:var(--google);font-weight:600;margin-left:6px;">เปิด Sheets 🔗</a></span></div>`;
+  if(notice)notice.innerHTML=`<div style="background:var(--google-light);border:1.5px solid var(--google);border-radius:10px;padding:10px 14px;font-size:13px;color:var(--google);display:flex;align-items:center;gap:10px;"><span style="font-size:18px;">🔗</span><span><strong>เชื่อมต่อ Google Sheets แล้ว</strong> — ข้อมูลจะ sync อัตโนมัติ <a href="https://docs.google.com/spreadsheets/d/1mxzalXs9hhHaEaKHP0XVUCFh-h_nHW9CDS7t0A8-_xs/edit" target="_blank" style="color:var(--google);font-weight:600;margin-left:6px;">เปิด Sheets 🔗</a></span></div>`;
   const rep=document.getElementById('updReporter');if(rep&&CURRENT_USER)rep.value=CURRENT_USER.displayName;
   backToStep1();
   // Repopulate filter dropdowns (reset first so they refresh after sync)
