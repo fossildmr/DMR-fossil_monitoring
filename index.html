@@ -1163,6 +1163,8 @@ function criticalStreak(p){
   const tr=getProjectTracking(p).quarters.filter(q=>q.actual!==null).sort((a,b)=>a.quarter-b.quarter);
   let streak=0;for(let i=tr.length-1;i>=0;i--){if(tr[i].status==='วิกฤติ')streak++;else break;}return streak;
 }
+// ★ ข้อ 3: annual = รวม actual ทุกไตรมาสที่รายงานแล้ว (Q1+Q2+Q3+Q4)
+// สถานะรายปี: (ผลรวม ÷ 100) × 100 → classifyRatio
 function getProjectTracking(p){
   const fy=p.planYear||p.startYear;
   const quarters=[1,2,3,4].map(q=>{
@@ -1172,32 +1174,15 @@ function getProjectTracking(p){
     const ratio=computeRatio(p,u.progress,u.year,q);
     return{quarter:q,target,actual:u.progress,ratio,status:classifyRatio(ratio),reporter:u.reporter||'',timestamp:u.timestamp,activity:u.activity||'',problems:u.problems||'',solution:u.solution||''};
   });
-
-  // ★ ความก้าวหน้ารายปี
-  // annualActual = ผลรวมจริงทุกไตรมาสที่รายงาน
-  // annualTargetSum = เป้าหมายรวมเฉพาะไตรมาสที่รายงานแล้ว
-  // annualRatio = (annualActual ÷ annualTargetSum) × 100
-  // ตัวอย่าง: Q1ผล20/เป้า25 + Q2ผล30/เป้า25 → actual=50, targetSum=50 → ratio=100% → ตามแผน
-  // ตัวอย่าง: Q1ผล25/เป้า25 + Q2ผล25/เป้า25 → actual=50, targetSum=50 → ratio=100% → ตามแผน
+  // ★ ความก้าวหน้ารายปี = ผลรวม actual ของทุกไตรมาสที่รายงานแล้ว
   const reportedQ=quarters.filter(q=>q.actual!==null);
-  let annualActual=null,annualTargetSum=null,annualRatio=null,annualStatus='ยังไม่รายงาน',lastQ=null;
+  let annualActual=null,annualStatus='ยังไม่รายงาน',lastQ=null;
   if(reportedQ.length>0){
-    annualActual=reportedQ.reduce((s,q)=>s+q.actual,0);
-    annualTargetSum=reportedQ.reduce((s,q)=>s+(q.target||0),0);
-    // annualRatio เทียบกับ targetSum (ไม่ใช่ 100 คงที่)
-    annualRatio=annualTargetSum>0?Math.round((annualActual/annualTargetSum)*1000)/10:null;
-    annualStatus=classifyRatio(annualRatio);
+    annualActual=reportedQ.reduce((sum,q)=>sum+q.actual,0);
+    annualStatus=classifyRatio(annualActual); // เทียบกับ 100% เต็มปี
     lastQ=reportedQ[reportedQ.length-1].quarter;
   }
-  const annual={
-    target:annualTargetSum,   // เป้าหมายรวมเฉพาะ Q ที่รายงาน
-    targetAll:100,            // เป้าหมายรวมทั้งปี (100%)
-    actual:annualActual,      // ผลรวมจริง
-    ratio:annualRatio,        // % เทียบกับ targetSum
-    status:annualStatus,
-    asOfQuarter:lastQ,
-    reportedCount:reportedQ.length
-  };
+  const annual={target:100,actual:annualActual,ratio:annualActual,status:annualStatus,asOfQuarter:lastQ,reportedCount:reportedQ.length};
   return{quarters,annual};
 }
 // ★ ข้อ 2: collectQuarterTargets ส่งเป็น % เฉพาะไตรมาส รวมกัน = 100%
@@ -1226,6 +1211,14 @@ function thaiMonth(m){const n=['','มกราคม','กุมภาพัน
 function thaiMonthShort(m){const n=['','ม.ค.','ก.พ.','มี.ค.','เม.ย.','พ.ค.','มิ.ย.','ก.ค.','ส.ค.','ก.ย.','ต.ค.','พ.ย.','ธ.ค.'];return n[m]||'';}
 function fileIcon(n){const e=n.split('.').pop().toLowerCase();if(e==='pdf')return '📄';if(['doc','docx'].includes(e))return '📝';if(['xls','xlsx'].includes(e))return '📊';if(['png','jpg','jpeg','gif'].includes(e))return '🖼️';return '📎';}
 function fmtSize(b){if(b<1024)return b+' B';if(b<1048576)return (b/1024).toFixed(1)+' KB';return (b/1048576).toFixed(1)+' MB';}
+function filterUnreportedProjects(){
+  // ไปหน้าโครงการทั้งหมด แล้ว set filter สถานะ = ยังไม่รายงาน
+  showPage('projects', document.querySelector('.nav-tab[onclick*="projects"]'));
+  setTimeout(()=>{
+    const sf = document.getElementById('filterStatus');
+    if(sf){ sf.value='ยังไม่รายงาน'; renderProjectTable(); }
+  }, 100);
+}
 function checkAlertDot(){
   const latest={};DB.updates.forEach(u=>{if(!latest[u.projectId]||u.timestamp>latest[u.projectId].timestamp)latest[u.projectId]=u;});
   const c=Object.values(latest).some(u=>{const p=getProject(u.projectId);if(!p)return false;const s=computeStatus(p,u.progress,u.year,u.quarter);return s==='วิกฤติ'||s==='ล่าช้า';});
@@ -1252,7 +1245,7 @@ function renderDashboard(){
     <div class="stat-card warning"><div class="stat-label">⚠️ ล่าช้า</div><div class="stat-value" style="color:var(--warning)">${late}</div><div class="stat-sub">โครงการ</div></div>
     <div class="stat-card info"><div class="stat-label">ℹ️ ต่ำกว่าแผน</div><div class="stat-value" style="color:var(--info)">${below}</div><div class="stat-sub">โครงการ</div></div>
     <div class="stat-card success"><div class="stat-label">✅ ตามแผน</div><div class="stat-value" style="color:var(--success)">${ontrack}</div><div class="stat-sub">โครงการ</div></div>
-    <div class="stat-card"><div class="stat-label">ความคืบหน้าเฉลี่ย</div><div class="stat-value" style="color:var(--primary)">${avgProg}%</div><div class="stat-sub">ภาพรวม</div></div>`;
+    <div class="stat-card" style="cursor:pointer;" onclick="filterUnreportedProjects()" title="คลิกเพื่อดูโครงการที่ยังไม่รายงาน"><div class="stat-label">⬜ ยังไม่รายงาน</div><div class="stat-value" style="color:var(--text-muted)">${unreported}</div><div class="stat-sub">โครงการ ${unreported>0?'<span style=\"color:var(--warning);font-size:11px;\">◀ คลิกดู</span>':''}</div></div>`;
   let bannerHtml='';
   if(crisis>0)bannerHtml+=`<div class="alert alert-danger"><span class="alert-icon">🔴</span><span>มี <strong>${crisis} โครงการ</strong> สถานะ <strong>วิกฤติ</strong>!</span></div>`;
   if(late>0)bannerHtml+=`<div class="alert alert-warning"><span class="alert-icon">⚠️</span><span>มี <strong>${late} โครงการ</strong> สถานะ <strong>ล่าช้า</strong></span></div>`;
@@ -1369,8 +1362,7 @@ function renderQuarterlySummary(){
       </div>`;
     }).join('');
     const ann=tr.annual;const annColor=ann.status==='ตามแผน'?'#27ae60':ann.status==='ต่ำกว่าแผน'?'#2980b9':ann.status==='ล่าช้า'?'#e67e22':'#c0392b';
-    // ★ ใช้ ratio เพื่อ progress bar (ratio = actual/targetSum×100)
-    const annProg=ann.ratio!==null?Math.min(ann.ratio,100):Math.min(ann.actual||0,100);
+    const annProg=Math.min(ann.actual||0,100);
     const bdText=tr.quarters.filter(q=>q.actual!==null).map(q=>`Q${q.quarter}:${q.actual}%`).join('+');
     return `<div class="qs-project-card">
       <div class="qs-proj-header">
@@ -1382,9 +1374,7 @@ function renderQuarterlySummary(){
         <div class="qs-q-cell">
           <div class="qs-q-label">ความก้าวหน้ารายปี</div>
           <div class="qs-annual-pct" style="color:${annColor};">${ann.actual!==null?ann.actual+'%':'—'}</div>
-          <div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">${ann.target!==null&&ann.target!==undefined?'เป้ารวม: '+ann.target+'%':''}</div>
-          <div class="qs-progress-mini"><div class="qs-progress-fill" style="width:${Math.min(ann.ratio||0,100)}%;background:${annColor};"></div></div>
-          ${ann.ratio!==null?`<div style="font-size:11px;color:var(--text-muted);margin-bottom:4px;">เทียบแผน: ${ann.ratio}%</div>`:''}
+          <div class="qs-progress-mini"><div class="qs-progress-fill" style="width:${annProg}%;background:${annColor};"></div></div>
           <span class="badge badge-${statusColor(ann.status)}">${ann.status}</span>
           ${bdText?`<div style="font-size:10px;color:var(--text-muted);margin-top:4px;">${bdText}</div>`:''}
         </div>
@@ -1699,16 +1689,11 @@ function updateAnnualSummaryBar(p,year){
   const annColor=ann.status==='ตามแผน'?'var(--success)':ann.status==='ต่ำกว่าแผน'?'var(--info)':ann.status==='ล่าช้า'?'var(--warning)':'var(--danger)';
   document.getElementById('annualPctDisplay').textContent=ann.actual+'%';
   document.getElementById('annualPctDisplay').style.color=annColor;
-  const pb=document.getElementById('annualProgressBar');
-  // ★ progress bar เทียบกับ targetSum (ไม่ใช่ 100)
-  const barWidth=ann.ratio!==null?Math.min(ann.ratio,100):Math.min(ann.actual,100);
-  pb.style.width=barWidth+'%';pb.style.background=annColor;
-  // แสดง status + ratio ที่ถูกต้อง
-  const ratioText=ann.ratio!==null?` (${ann.ratio}% ของเป้า ${ann.target||'?'}%)`:'';
-  document.getElementById('annualStatusDisplay').innerHTML=`<span class="badge badge-${statusColor(ann.status)}" style="font-size:13px;">${ann.status}</span><span style="font-size:12px;color:var(--text-muted);margin-left:6px;">${ratioText}</span>`;
-  // Breakdown: Q1:20%/25% + Q2:30%/25% = 50% จาก 50%
-  const bd=tr.quarters.filter(q=>q.actual!==null).map(q=>`Q${q.quarter}:${q.actual}%/${q.target}%`).join(' + ');
-  document.getElementById('annualQBreakdown').textContent=bd?`${bd} = ${ann.actual}% จาก ${ann.target||'?'}%`:'';}
+  const pb=document.getElementById('annualProgressBar');pb.style.width=Math.min(ann.actual,100)+'%';pb.style.background=annColor;
+  document.getElementById('annualStatusDisplay').innerHTML=`<span class="badge badge-${statusColor(ann.status)}" style="font-size:13px;">${ann.status}</span>`;
+  // Breakdown
+  const bd=tr.quarters.filter(q=>q.actual!==null).map(q=>`Q${q.quarter}: ${q.actual}%`).join(' + ');
+  document.getElementById('annualQBreakdown').textContent=bd?`( ${bd} )`:'';}
 
 
 function selectQCard(q){
@@ -1809,10 +1794,8 @@ function setSyncBadge(type,text){const b=document.getElementById('syncStatusBadg
 // VIEW PROJECT DETAIL
 // ═══════════════════════════════════════════════════
 function trackingRowHtml(q,isAnnual){
-  const label=isAnnual?'สรุปรายปี (เฉพาะ Q ที่รายงาน)':'ไตรมาส '+q.quarter;
-  // annual row: target = targetSum (ไม่ใช่ 100)
-  const targetDisp=q.target!==null&&q.target!==undefined?(isAnnual?q.target+'% (เป้ารวม)':q.target+'%'):'—';
-  return `<tr ${isAnnual?'style="font-weight:700;background:#f9fafb;"':''}><td>${label}</td><td class="text-right">${targetDisp}</td><td class="text-right">${q.actual===null?'—':q.actual+'%'}</td><td class="text-right">${q.ratio===null?'—':q.ratio+'%'}</td><td class="text-center"><span class="badge badge-${statusColor(q.status)}">${q.status}</span></td></tr>`;
+  const label=isAnnual?'สรุปรายปี':'ไตรมาส '+q.quarter;
+  return `<tr ${isAnnual?'style="font-weight:700;background:#f9fafb;"':''}><td>${label}</td><td class="text-right">${q.target}%</td><td class="text-right">${q.actual===null?'—':q.actual+'%'}</td><td class="text-right">${q.ratio===null?'—':q.ratio+'%'}</td><td class="text-center"><span class="badge badge-${statusColor(q.status)}">${q.status}</span></td></tr>`;
 }
 function viewProject(id){
   const p=getProject(id);if(!p)return;
