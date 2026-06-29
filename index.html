@@ -359,7 +359,7 @@ select.form-control{cursor:pointer}
     <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="เมนู">☰</button>
     <div class="logo"><img src="https://www.dmr.go.th/wp-content/uploads/2022/08/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%81%E0%B8%A3%E0%B8%A1%E0%B8%97%E0%B8%A3%E0%B8%B1%E0%B8%9E%E0%B8%A2%E0%B8%B2%E0%B8%81%E0%B8%A3%E0%B8%98%E0%B8%A3%E0%B8%93%E0%B8%B5-2.png" alt="" style="width:100%;height:100%;object-fit:contain;"></div>
     <div class="header-text">
-      <h1>ระบบติดตามแผนปฏิบัติการการคุ้มครองแหล่งซากดึกดำบรรพ์</h1>
+      <h1>ระบบติดตามแผนปฏิบัติการการคุ้มครองแหล่งซากดึกดำบรรพ์และซากดึกดำบรรพ์</h1>
       <p>ระยะ 5 ปี (พ.ศ. 2566–2570)</p>
     </div>
     <div class="header-actions no-print">
@@ -950,8 +950,8 @@ function showRegisterForm(){
   document.getElementById('loginFormFields').innerHTML=`
     <div class="form-group"><label class="form-label">ชื่อหน่วยงาน</label><input type="text" class="form-control" id="regOrg" placeholder="สังกัด/หน่วยงาน"></div>
     <div class="form-group"><label class="form-label required">ชื่อ-สกุล</label><input type="text" class="form-control" id="regName" placeholder="ภาษาไทย"></div>
-    <div class="form-group"><label class="form-label">อีเมล</label><input type="text" class="form-control" id="regEmail"></div>
-    <div class="form-group"><label class="form-label required">ชื่อผู้ใช้ (Username)</label><input type="text" class="form-control" id="regUser" placeholder="ภาษาอังกฤษหรือตัวเลข"></div>
+    <div class="form-group"><label class="form-label">อีเมล</label><input type="text" class="form-control" id="regEmail" placeholder="กรอกอีเมล">></div>
+    <div class="form-group"><label class="form-label required">ชื่อผู้ใช้ (Username)</label><input type="text" class="form-control" id="regUser" placeholder="ระบุชื่อผู้ใช้ (ภาษาอังกฤษหรือตัวเลข)"></div>
     <div class="form-group"><label class="form-label required">รหัสผ่าน</label><input type="password" class="form-control" id="regPass" placeholder="ไม่ต่ำกว่า 4 ตัว"></div>
     <button class="btn btn-success" style="width:100%;justify-content:center;margin-bottom:10px;" onclick="submitRegister()">ยืนยันการสมัคร</button>
     <button class="btn btn-outline" style="width:100%;justify-content:center;" onclick="location.reload()">ย้อนกลับ</button>`;
@@ -1555,7 +1555,18 @@ function filterProjectSearch(){renderProjectPicker();}
 
 function pickProject(id){
   const p=getProject(id);if(!p)return;
-  const year=document.getElementById('updYear').value;
+  // ★ แก้บั๊ก: เดิมใช้ปีจาก dropdown กลางหน้า (updYear) ตรงๆ โดยไม่สนใจว่าโครงการนี้ planYear คืออะไร
+  // ถ้า dropdown ค้างอยู่ปีอื่นที่ไม่ตรงกับ planYear ของโครงการ การกรอกความคืบหน้าจะถูกบันทึก
+  // เป็นปีที่ไม่ตรงกับโครงการ ทำให้ตอนแสดงผล (ซึ่งกรองด้วย planYear ของโครงการ) มองไม่เห็นข้อมูลที่กรอกไปแล้ว
+  // จึงต้อง sync dropdown ให้ตรงกับ planYear ของโครงการที่เลือกก่อนเสมอ
+  const projYear=String(p.planYear||p.startYear||'');
+  const yearSel=document.getElementById('updYear');
+  if(yearSel&&projYear){
+    let found=false;
+    for(const o of yearSel.options){if(o.value===projYear){o.selected=true;found=true;break;}}
+    if(!found){const o=document.createElement('option');o.value=projYear;o.textContent=projYear;yearSel.appendChild(o);o.selected=true;}
+  }
+  const year=yearSel?yearSel.value:projYear;
   document.getElementById('updProjectId').value=id;
   document.getElementById('updStep1').style.display='none';
   document.getElementById('updStep2').style.display='block';
