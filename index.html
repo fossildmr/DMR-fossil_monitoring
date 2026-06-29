@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>ระบบติดตามแผนปฏิบัติการ การคุ้มครองแหล่งซากดึกดำบรรพ์ ระยะ 5 ปี (2566–2570)</title>
+<title>ระบบติดตามแผนปฏิบัติการการคุ้มครองแหล่งซากดึกดำบรรพ์และซากดึกดำบรรพ์ ระยะ 5 ปี (2566–2570)</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Sarabun:wght@300;400;500;600;700&display=swap" rel="stylesheet">
@@ -359,7 +359,7 @@ select.form-control{cursor:pointer}
     <button class="hamburger" id="hamburgerBtn" onclick="toggleSidebar()" aria-label="เมนู">☰</button>
     <div class="logo"><img src="https://www.dmr.go.th/wp-content/uploads/2022/08/%E0%B8%95%E0%B8%A3%E0%B8%B2%E0%B8%81%E0%B8%A3%E0%B8%A1%E0%B8%97%E0%B8%A3%E0%B8%B1%E0%B8%9E%E0%B8%A2%E0%B8%B2%E0%B8%81%E0%B8%A3%E0%B8%98%E0%B8%A3%E0%B8%93%E0%B8%B5-2.png" alt="" style="width:100%;height:100%;object-fit:contain;"></div>
     <div class="header-text">
-      <h1>ระบบติดตามแผนปฏิบัติการฯ คุ้มครองแหล่งซากดึกดำบรรพ์</h1>
+      <h1>ระบบติดตามแผนปฏิบัติการการคุ้มครองแหล่งซากดึกดำบรรพ์</h1>
       <p>ระยะ 5 ปี (พ.ศ. 2566–2570)</p>
     </div>
     <div class="header-actions no-print">
@@ -1025,13 +1025,13 @@ async function pushUpdateToSheets(update,project){
     projectId:project.id,
     projectName:project.name,
     plan:project.plan||'',
-    strategy:project.strategy||'',  // ★ เพิ่ม strategy
+    strategy:project.strategy||'',
     indicator:project.indicator||'',
     owner:project.owner||'',
     year:update.year,
     quarter:update.quarter,
     reporter:update.reporter,
-    progress:Number(update.progress),  // ★ force Number
+    progress:Number(update.progress),
     status:update.status,
     activity:update.activity,
     problems:update.problems||'',
@@ -1039,21 +1039,12 @@ async function pushUpdateToSheets(update,project){
     budgetUsed:update.budgetUsed||0,
     files:(update.files||[]).map(f=>({name:f.name,size:f.size,type:f.type,driveLink:f.driveLink||''}))
   }};
-  console.log('[pushUpdateToSheets] sending:', JSON.stringify(payload).substring(0,200));
   const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload),signal:AbortSignal.timeout(20000)});
   const text=await res.text();
-  console.log('[pushUpdateToSheets] response:', text.substring(0,300));
   let json;
   try{json=JSON.parse(text);}
-  catch(e){
-    // Apps Script บางครั้งส่ง HTML error กลับมา
-    console.error('[pushUpdateToSheets] JSON parse failed:', text.substring(0,200));
-    throw new Error('Apps Script ตอบกลับผิดรูปแบบ: '+text.substring(0,100));
-  }
-  // ★ ตรวจ ok อย่างเข้มงวด — ต้องเป็น true จริงๆ
-  if(json.ok!==true){
-    throw new Error(json.error||json.message||'Apps Script ตอบ ok=false');
-  }
+  catch(e){throw new Error('Apps Script ตอบกลับผิดรูปแบบ: '+text.substring(0,100));}
+  if(json.ok!==true){throw new Error(json.error||json.message||'Apps Script ตอบ ok=false');}
   return json;
 }
 async function pushProjectToSheets(project,action='saveProject'){
@@ -1177,7 +1168,7 @@ function criticalStreak(p){
 function getProjectTracking(p){
   const fy=p.planYear||p.startYear;
   const quarters=[1,2,3,4].map(q=>{
-    const us=DB.updates.filter(u=>u.projectId===p.id&&String(u.quarter)===String(q)&&String(u.year)===String(fy));
+    const us=DB.updates.filter(u=>u.projectId===p.id&&String(u.quarter)===String(q)&&(!fy||String(u.year)===String(fy)));
     us.sort((a,b)=>b.timestamp-a.timestamp);const u=us[0];const target=getQuarterTarget(p,fy,q);
     if(!u)return{quarter:q,target,actual:null,ratio:null,status:'ยังไม่รายงาน',reporter:'',timestamp:null,activity:'',problems:'',solution:''};
     const ratio=computeRatio(p,u.progress,u.year,q);
@@ -1272,40 +1263,34 @@ function renderDashboard(){
 // PROJECTS TABLE
 // ═══════════════════════════════════════════════════
 function renderProjectTable(){
-  // ── Populate filter dropdowns (reset & rebuild จาก DB จริง) ──
+  // Populate filters
   const pf=document.getElementById('filterPlan');
   if(pf&&pf.options.length<=1){DB.plans.forEach(p=>{const o=document.createElement('option');o.value=p;o.textContent=p.replace('แผนปฏิบัติการ ','').substring(0,50);pf.appendChild(o);});}
   const sf=document.getElementById('filterStrategy');
   if(sf&&sf.options.length<=1){(DB.strategies||[]).forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s.substring(0,50);sf.appendChild(o);});}
   const inf=document.getElementById('filterIndicator');
   if(inf&&inf.options.length<=1){DB.indicators.forEach(s=>{const o=document.createElement('option');o.value=s;o.textContent=s;inf.appendChild(o);});}
-
-  // ── Populate ปีจาก planYear ที่มีจริงใน DB (dynamic) ──
-  const yf=document.getElementById('filterYear');
-  if(yf){
-    const currentYearVal=yf.value;
-    const years=[...new Set(DB.projects.map(p=>String(p.planYear||p.startYear||'')).filter(Boolean))].sort();
-    yf.innerHTML='<option value="">ทุกปี</option>';
-    years.forEach(yr=>{const o=document.createElement('option');o.value=yr;o.textContent='พ.ศ. '+yr;yf.appendChild(o);});
-    // คืนค่าที่เลือกไว้ถ้ายังมีอยู่
-    if(currentYearVal&&years.includes(currentYearVal))yf.value=currentYearVal;
+  // สร้าง year options จาก DB จริง
+  const _yf=document.getElementById('filterYear');
+  if(_yf){
+    const _curY=_yf.value;
+    const _years=[...new Set(DB.projects.map(p=>String(p.planYear||p.startYear||'')).filter(Boolean))].sort();
+    _yf.innerHTML='<option value="">ทุกปี</option>';
+    _years.forEach(yr=>{const o=document.createElement('option');o.value=yr;o.textContent='พ.ศ. '+yr;_yf.appendChild(o);});
+    if(_curY&&_years.includes(_curY))_yf.value=_curY;
   }
-
   const search=(document.getElementById('searchProj')?.value||'').toLowerCase();
   const planF=document.getElementById('filterPlan')?.value||'';
   const stratF=document.getElementById('filterStrategy')?.value||'';
   const indF=document.getElementById('filterIndicator')?.value||'';
   const statusF=document.getElementById('filterStatus')?.value||'';
   const yearF=document.getElementById('filterYear')?.value||'';
-
   let filtered=DB.projects.filter(p=>{
     const inS=!search||p.name.toLowerCase().includes(search)||(p.owner||'').toLowerCase().includes(search);
     const inP=!planF||p.plan===planF;
     const inSt2=!stratF||(p.strategy||'')===stratF;
     const inInd=!indF||(p.indicator||'')===indF;
-    // ★ FIX: filter ปีจาก planYear โดยตรง
-    const projYear=String(p.planYear||p.startYear||'');
-    const inY=!yearF||projYear===String(yearF);
+    const inY=!yearF||String(p.planYear||p.startYear||'')===String(yearF);
     const eff_s=yearF?getStatusFiltered(p.id,yearF,''):getStatus(p.id);
     const inSt=!statusF||eff_s===statusF;
     return inS&&inP&&inSt2&&inInd&&inY&&inSt;
@@ -1712,7 +1697,10 @@ function updateQStatusPreview(q){
   if(!id){el.innerHTML='';return;}
   const p=getProject(id);if(!p)return;
   const year=document.getElementById('updYear').value;
-  const progress=parseInt(document.getElementById('upd_prog_'+q)?.value)||0;
+  // อ่านจาก number input ก่อน แล้ว fallback ไป slider
+  const _numEl=document.getElementById('upd_prog_num_'+q);
+  const _sliderEl=document.getElementById('upd_prog_'+q);
+  const progress=_numEl?Number(_numEl.value):(_sliderEl?Number(_sliderEl.value):0);
   const target=getQuarterTarget(p,parseInt(year),q);
   const ratio=computeRatio(p,progress,year,q);const status=computeStatus(p,progress,year,q);
   const sColor=statusColor(status);
@@ -1745,15 +1733,13 @@ async function submitUpdate(){
   const q=selectedQuarter;
   const activity=(document.getElementById('upd_activity_'+q)?.value||'').trim();
   if(!activity){showToast('กรุณากรอกผลการดำเนินงาน','red');return;}
-  // ★ อ่านค่า progress จาก number input ก่อน แล้ว fallback ไป slider
-  const numEl=document.getElementById('upd_prog_num_'+q);
-  const sliderEl=document.getElementById('upd_prog_'+q);
-  const progress=numEl?Number(numEl.value):( sliderEl?Number(sliderEl.value):0 );
-  console.log('[submitUpdate] progress value:', progress, 'from numEl:', numEl?.value, 'sliderEl:', sliderEl?.value);
+  // อ่านจาก number input ก่อน แล้ว fallback ไป slider
+  const _numEl=document.getElementById('upd_prog_num_'+q);
+  const _sliderEl=document.getElementById('upd_prog_'+q);
+  const progress=_numEl?Number(_numEl.value):(_sliderEl?Number(_sliderEl.value):0);
   const problems=(document.getElementById('upd_problems_'+q)?.value||'').trim();
   const solution=(document.getElementById('upd_solution_'+q)?.value||'').trim();
   const project=getProject(projectId);
-  if(!project){showToast('ไม่พบข้อมูลโครงการ','red');return;}
   const status=computeStatus(project,progress,year,q);
   const btn=document.getElementById('submitBtn');btn.disabled=true;btn.textContent='⏳ กำลังบันทึก...';
   setSyncBadge('pending','⏳ กำลัง sync...');
@@ -1762,17 +1748,14 @@ async function submitUpdate(){
   DB.updates.push(update);DB.lastUpdated=Date.now();saveLocalCache();checkAlertDot();
   let syncOk=false;
   try{
-    const result=await pushUpdateToSheets(update,project);
-    syncOk=true;
-    console.log('[submitUpdate] sync success:', result);
+    await pushUpdateToSheets(update,project);syncOk=true;
     setSyncBadge('ok','✅ Synced to Google Sheets');
     if(status==='วิกฤติ'||status==='ล่าช้า')showToast(`บันทึกสำเร็จ — สถานะ "${status}" ส่งอีเมลแจ้งเตือนแล้ว ✅`);
-    else showToast('บันทึกสำเร็จและ sync ไปยัง Google Sheets ✅ ('+progress+'%)');
+    else showToast('บันทึกสำเร็จและ sync ไปยัง Google Sheets ✅');
   }catch(e){
-    console.error('[submitUpdate] sync failed:', e);
     setSyncBadge('err','❌ Sheets sync ล้มเหลว');
-    showToast('❌ ส่งข้อมูลไม่สำเร็จ: '+e.message+' — กรุณาลองใหม่','red');
-    // ★ ถ้า sync ล้มเหลว ให้ลบ update ออกจาก DB ด้วย (ไม่งั้นจะแสดงข้อมูลผิด)
+    showToast('❌ ส่งข้อมูลไม่สำเร็จ: '+e.message,'red');
+    // ลบ update ออกจาก local cache เพื่อไม่ให้แสดงข้อมูลผิดพลาด
     DB.updates=DB.updates.filter(u=>u.id!==update.id);
     saveLocalCache();
   }
