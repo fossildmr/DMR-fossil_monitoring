@@ -230,6 +230,9 @@ select.form-control{cursor:pointer}
 .q-card:hover{border-color:var(--primary-light)}
 .q-card.selected{border-color:var(--primary);background:#fff;box-shadow:0 4px 16px rgba(29,92,67,.15)}
 .q-card.locked{opacity:.45;pointer-events:none;cursor:not-allowed}
+.q-card-readonly{cursor:not-allowed;background:#f9fafb;border-color:#e2e8f0}
+.q-card-readonly:hover{border-color:#e2e8f0}
+.q-card-readonly .q-form-area{display:none}
 .q-card-header{padding:12px 14px;background:var(--primary-pale);display:flex;justify-content:space-between;align-items:center}
 .q-card.selected .q-card-header{background:var(--primary);color:#fff}
 .q-card-title{font-weight:700;font-size:14px}
@@ -1100,7 +1103,8 @@ async function pushUpdateToSheets(update,project){
     problems:update.problems||'',
     solution:update.solution||'',
     budgetUsed:update.budgetUsed||0,
-    files:(update.files||[]).map(f=>({name:f.name,size:f.size,type:f.type,driveLink:f.driveLink||''}))
+    files:(update.files||[]).map(f=>({name:f.name,size:f.size,type:f.type,driveLink:f.driveLink||''})),
+    isAdmin:isAdmin()   // ★ ส่ง flag ไปให้ backend ตรวจสอบสิทธิ์อีกชั้น (defense in depth)
   }};
   const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify(payload),signal:AbortSignal.timeout(20000)});
   const text=await res.text();
@@ -1714,10 +1718,13 @@ function renderQuarterCards(p,year){
   const qRange=['','ต.ค.–ธ.ค.','ม.ค.–มี.ค.','เม.ย.–มิ.ย.','ก.ค.–ก.ย.'];
   const container=document.getElementById('quarterCardsContainer');
   pendingFiles={1:[],2:[],3:[],4:[]};
+  const userIsAdmin=isAdmin();
   container.innerHTML=[1,2,3,4].map(q=>{
     const target=getQuarterTarget(p,parseInt(year),q);
     const existing=DB.updates.filter(u=>u.projectId===p.id&&String(u.quarter)===String(q)&&String(u.year)===String(year)).sort((a,b)=>b.timestamp-a.timestamp)[0];
     const hasExisting=!!existing;
+    // ★ ข้อ 1: ไตรมาสที่มีข้อมูลแล้ว — ผู้ใช้ทั่วไปแก้ไขไม่ได้ แต่ Admin แก้ไขได้เสมอ
+    const isLockedForUser=hasExisting&&!userIsAdmin;
     const exStatus=hasExisting?existing.status:'';
     const exProg=hasExisting?existing.progress:0;
     const exRatio=hasExisting?computeRatio(p,existing.progress,year,q):null;
@@ -1725,7 +1732,10 @@ function renderQuarterCards(p,year){
     // Existing data summary shown below target (before form)
     const existingSummary=hasExisting?`
       <div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
-        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;">📋 ผลที่กรอกล่าสุด — ${thaiDate(existing.timestamp)}</div>
+        <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
+          <span>📋 ผลที่กรอกล่าสุด — ${thaiDate(existing.timestamp)}</span>
+          ${isLockedForUser?'<span style="background:#f3f4f6;color:#6b7280;border-radius:10px;padding:2px 8px;font-weight:600;">🔒 แก้ไขไม่ได้</span>':(hasExisting&&userIsAdmin?'<span style="background:#fff3e0;color:#e65100;border-radius:10px;padding:2px 8px;font-weight:600;">👑 Admin แก้ไขได้</span>':'')}
+        </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <div>
             <div style="font-size:28px;font-weight:800;color:var(--${statusC==='gray'?'text-muted':statusC==='success'?'success':statusC==='info'?'info':statusC==='warning'?'warning':'danger'});">${exProg}%</div>
@@ -1741,7 +1751,9 @@ function renderQuarterCards(p,year){
         </div>
         ${existing.activity?`<div style="margin-top:8px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px;"><strong>ผลดำเนินงาน:</strong> ${existing.activity.substring(0,120)}${existing.activity.length>120?'…':''}</div>`:''}
       </div>`:'';
-    return `<div class="q-card" id="qcard_${q}" onclick="selectQCard(${q})">
+    const cardLockedClass=isLockedForUser?' q-card-readonly':'';
+    const clickHandler=isLockedForUser?`onclick="showToast('🔒 ไตรมาสนี้กรอกข้อมูลแล้ว ไม่สามารถแก้ไขได้ (ติดต่อผู้ดูแลระบบหากต้องการแก้ไข)','red')"`:`onclick="selectQCard(${q})"`;
+    return `<div class="q-card${cardLockedClass}" id="qcard_${q}" data-locked="${isLockedForUser}" ${clickHandler}>
       <div class="q-card-header">
         <div><div class="q-card-title">${qNames[q]}</div><div class="q-card-sub">${qRange[q]}</div></div>
         ${hasExisting?`<span class="badge badge-${statusC}" style="font-size:12px;">${exStatus} · ${exProg}%</span>`:'<span style="font-size:11px;opacity:.7;">ยังไม่รายงาน</span>'}
@@ -1749,7 +1761,10 @@ function renderQuarterCards(p,year){
       <div class="q-card-body">
         <div class="q-target-chip">🎯 เป้าหมายไตรมาสนี้: ${target}%</div>
         ${existingSummary}
-        <div class="q-placeholder" style="padding:6px 0;font-size:13px;color:var(--text-muted);">👆 คลิกเพื่อ${hasExisting?'แก้ไข':'เปิดฟอร์มกรอก'}</div>
+        ${isLockedForUser
+          ?`<div class="q-placeholder" style="padding:10px 0;font-size:13px;color:var(--text-muted);text-align:center;">🔒 ไตรมาสนี้กรอกข้อมูลแล้ว — แก้ไขไม่ได้</div>`
+          :`<div class="q-placeholder" style="padding:6px 0;font-size:13px;color:var(--text-muted);">👆 คลิกเพื่อ${hasExisting?'แก้ไข (Admin)':'เปิดฟอร์มกรอก'}</div>`
+        }
         <div class="q-lock-msg">🔒 ปิดอยู่</div>
         <div class="q-form-area">
           <div class="form-group" style="margin-bottom:12px;">
@@ -1817,11 +1832,18 @@ function updateAnnualSummaryBar(p,year){
 
 
 function selectQCard(q){
+  // ★ ป้องกันการเลือกไตรมาสที่ถูก lock (เผื่อกรณีเรียกผ่าน setTimeout จาก selectedQuarter)
+  const targetCard=document.getElementById('qcard_'+q);
+  if(targetCard&&targetCard.dataset.locked==='true'){
+    showToast('🔒 ไตรมาสนี้กรอกข้อมูลแล้ว ไม่สามารถแก้ไขได้','red');
+    return;
+  }
   selectedQuarter=q;
   [1,2,3,4].forEach(i=>{
     const card=document.getElementById('qcard_'+i);if(!card)return;
     card.classList.remove('selected','locked');
-    if(i===q)card.classList.add('selected');else card.classList.add('locked');
+    if(i===q)card.classList.add('selected');
+    else if(card.dataset.locked!=='true')card.classList.add('locked'); // ไม่ทับ class ของการ์ดที่ readonly อยู่แล้ว
   });
   updateQStatusPreview(q);
 }
@@ -1870,6 +1892,12 @@ async function submitUpdate(){
   if(!reporter){showToast('กรุณาระบุชื่อผู้รายงาน','red');return;}
   if(!selectedQuarter){showToast('กรุณาเลือกไตรมาสที่ต้องการรายงาน','red');return;}
   const q=selectedQuarter;
+  // ★ ข้อ 1: ป้องกันการบันทึกซ้อนไตรมาสที่มีข้อมูลแล้ว ถ้าไม่ใช่ Admin (double-check ก่อน submit จริง)
+  const _existingQ=DB.updates.filter(u=>u.projectId===projectId&&String(u.quarter)===String(q)&&String(u.year)===String(year));
+  if(_existingQ.length>0&&!isAdmin()){
+    showToast('🔒 ไตรมาสนี้กรอกข้อมูลแล้ว ไม่สามารถแก้ไขได้ (เฉพาะผู้ดูแลระบบเท่านั้นที่แก้ไขได้)','red');
+    return;
+  }
   const activity=(document.getElementById('upd_activity_'+q)?.value||'').trim();
   if(!activity){showToast('กรุณากรอกผลการดำเนินงาน','red');return;}
   // อ่านจาก number input ก่อน แล้ว fallback ไป slider
