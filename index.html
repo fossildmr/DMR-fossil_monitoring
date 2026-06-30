@@ -432,7 +432,10 @@ select.form-control{cursor:pointer}
 <div id="page-dashboard" class="page active">
   <div class="page-header">
     <div><div class="page-title">📊 ภาพรวมแผนปฏิบัติการ</div><div class="page-sub" id="dashLastUpdate">อัปเดตล่าสุด: —</div></div>
-    <div style="display:flex;gap:8px;" class="no-print">
+    <div style="display:flex;gap:8px;flex-wrap:wrap;" class="no-print">
+      <select class="form-control" style="width:auto;font-size:13px;" id="dashOrgFilter" onchange="renderDashboard()">
+        <option value="">ทุกหน่วยงาน</option>
+      </select>
       <select class="form-control" style="width:auto;font-size:13px;" id="dashYearFilter" onchange="renderDashboard()">
         <option value="">ทุกปี</option><option value="2569">พ.ศ. 2569</option><option value="2570">พ.ศ. 2570</option>
       </select>
@@ -473,6 +476,7 @@ select.form-control{cursor:pointer}
     <select id="filterPlan" class="form-control" style="width:auto;" onchange="renderProjectTable()"><option value="">ทุกแผนปฏิบัติการ</option></select>
     <select id="filterStrategy" class="form-control" style="width:auto;" onchange="renderProjectTable()"><option value="">ทุกแนวทางการพัฒนา</option></select>
     <select id="filterIndicator" class="form-control" style="width:auto;" onchange="renderProjectTable()"><option value="">ทุกเป้าหมาย/ตัวชี้วัด</option></select>
+    <select id="filterOrg" class="form-control" style="width:auto;" onchange="renderProjectTable()"><option value="">ทุกหน่วยงาน</option></select>
     <select id="filterYear" class="form-control" style="width:auto;" onchange="renderProjectTable()"><option value="">ทุกปี</option></select>
     <select id="filterStatus" class="form-control" style="width:auto;" onchange="renderProjectTable()">
       <option value="">ทุกสถานะ</option><option value="วิกฤติ">วิกฤติ</option><option value="ล่าช้า">ล่าช้า</option>
@@ -517,6 +521,7 @@ select.form-control{cursor:pointer}
     <select id="qtrFilterPlan" class="form-control" style="width:auto;" onchange="renderQuarterlySummary()"><option value="">ทุกแผนปฏิบัติการ</option></select>
     <select id="qtrFilterStrategy" class="form-control" style="width:auto;" onchange="renderQuarterlySummary()"><option value="">ทุกแนวทางการพัฒนา</option></select>
     <select id="qtrFilterIndicator" class="form-control" style="width:auto;" onchange="renderQuarterlySummary()"><option value="">ทุกเป้าหมาย/ตัวชี้วัด</option></select>
+    <select id="qtrFilterOrg" class="form-control" style="width:auto;" onchange="renderQuarterlySummary()"><option value="">ทุกหน่วยงาน</option></select>
     <select id="qtrFilterProject" class="form-control" style="width:auto;" onchange="renderQuarterlySummary()"><option value="">ทุกโครงการ</option></select>
   </div>
   <div id="quarterlyCardsContainer"></div>
@@ -709,6 +714,10 @@ select.form-control{cursor:pointer}
         <select id="updFilterIndicator" class="form-control" onchange="renderProjectPicker()"
           style="font-size:12px;padding:5px 10px;height:auto;width:auto;border-radius:20px;background:#f9fafb;">
           <option value="">ตัวชี้วัดทั้งหมด</option>
+        </select>
+        <select id="updFilterOrg" class="form-control" onchange="renderProjectPicker()"
+          style="font-size:12px;padding:5px 10px;height:auto;width:auto;border-radius:20px;background:#f9fafb;">
+          <option value="">หน่วยงานทั้งหมด</option>
         </select>
         <select id="updFilterStatus" class="form-control" onchange="renderProjectPicker()"
           style="font-size:12px;padding:5px 10px;height:auto;width:auto;border-radius:20px;background:#f9fafb;">
@@ -1173,26 +1182,44 @@ function getStatus(id){
 }
 function getProgressFiltered(id,yF,qF){
   if(qF){const u=getLatestUpdateFiltered(id,yF,qF);return u?u.progress:0;}
+  // ★ FIX: ใช้ getProjectTracking() เพื่อให้ผลรวม progress ตรงกับหน้าอื่นเป๊ะ ๆ
   const p=getProject(id);if(!p)return 0;
-  // Return sum of all quarters for the year
-  const fy=yF||p.planYear||p.startYear;
-  const qs=DB.updates.filter(u=>u.projectId===id&&(!fy||String(u.year)===String(fy)));
-  const byQ={};qs.forEach(u=>{const q=u.quarter;if(!byQ[q]||u.timestamp>byQ[q].timestamp)byQ[q]=u;});
-  return Object.values(byQ).reduce((s,u)=>s+u.progress,0);
+  const tr=getProjectTracking(p);
+  return tr.annual.actual||0;
 }
 function getStatusFiltered(id,yF,qF){
+  // ★ FIX: ถ้าระบุไตรมาส (qF) → สถานะเฉพาะไตรมาสนั้น (เทียบ % ไตรมาสนั้นกับเป้าไตรมาสนั้น)
   if(qF){const u=getLatestUpdateFiltered(id,yF,qF);if(!u)return 'ยังไม่รายงาน';return computeStatus(getProject(id),u.progress,u.year,u.quarter);}
+  // ★ FIX: ถ้าไม่ระบุไตรมาส → ใช้ getProjectTracking() เป็นมาตรฐานเดียวกับทุกหน้า
+  // (annual.status = ผลรวมจริง ÷ เป้ารวมเฉพาะ Q ที่รายงานแล้ว)
   const p=getProject(id);if(!p)return 'ยังไม่รายงาน';
-  const fy=yF||p.planYear||p.startYear;
-  const qs=DB.updates.filter(u=>u.projectId===id&&(!fy||String(u.year)===String(fy)));
-  if(!qs.length)return 'ยังไม่รายงาน';
-  const byQ={};qs.forEach(u=>{const q=u.quarter;if(!byQ[q]||u.timestamp>byQ[q].timestamp)byQ[q]=u;});
-  const sum=Object.values(byQ).reduce((s,u)=>s+u.progress,0);
-  return classifyRatio(sum);
+  const tr=getProjectTracking(p);
+  return tr.annual.status;
 }
 function statusColor(s){if(s==='ตามแผน')return 'success';if(s==='ต่ำกว่าแผน')return 'info';if(s==='ล่าช้า')return 'warning';if(s==='วิกฤติ')return 'danger';return 'gray';}
 // quarterTargets เก็บเป็น % เฉพาะไตรมาส (increments) รวมกัน = 100%
 // เช่น Q1=25, Q2=25, Q3=25, Q4=25 หรือ Q1=20, Q2=30, Q3=30, Q4=20
+
+// ★ Helper: ตรวจว่าโครงการมีหน่วยงานนี้เป็น Owner ไหม (รองรับหลายหน่วยงาน)
+function projectHasOrg(p, orgName){
+  if(!orgName) return true;
+  const owners=(p.owners&&p.owners.length>0)?p.owners:String(p.owner||'').split(/[|\/]/).map(s=>s.trim()).filter(Boolean);
+  return owners.some(o=>o.trim()===orgName.trim());
+}
+// ★ Helper: populate org filter dropdown จาก DB.orgs (รวมกับ org ที่มีอยู่ในโครงการจริงด้วย)
+function populateOrgFilterDropdown(selId){
+  const sel=document.getElementById(selId);
+  if(!sel||sel.options.length>1)return;
+  const fromOrgs=DB.orgs||[];
+  const fromProjects=new Set();
+  DB.projects.forEach(p=>{
+    const owners=(p.owners&&p.owners.length>0)?p.owners:String(p.owner||'').split(/[|\/]/).map(s=>s.trim()).filter(Boolean);
+    owners.forEach(o=>fromProjects.add(o));
+  });
+  const allOrgs=[...new Set([...fromOrgs,...fromProjects])].sort();
+  allOrgs.forEach(o=>{const opt=document.createElement('option');opt.value=o;opt.textContent=o;sel.appendChild(opt);});
+}
+
 function getQuarterTarget(p,fy,q){
   q=parseInt(q);
   if(p&&p.quarterTargets&&p.quarterTargets['Q'+q]!=null) return Number(p.quarterTargets['Q'+q]);
@@ -1298,10 +1325,15 @@ function initCurrentQuarter(){
 // DASHBOARD
 // ═══════════════════════════════════════════════════
 function renderDashboard(){
+  populateOrgFilterDropdown('dashOrgFilter');
   const yearF=document.getElementById('dashYearFilter').value;const qF=document.getElementById('dashQFilter').value;
+  const orgF=document.getElementById('dashOrgFilter')?.value||'';
   let projects=DB.projects;if(yearF)projects=projects.filter(p=>String(p.planYear||p.startYear)===String(yearF));
+  // ★ filter หน่วยงาน
+  if(orgF)projects=projects.filter(p=>{const ow=(p.owners&&p.owners.length>0)?p.owners:String(p.owner||'').split(/[|\/]/).map(s=>s.trim());return ow.includes(orgF);});
   const total=projects.length;let ontrack=0,below=0,late=0,crisis=0,unreported=0,totalProgress=0;
-  projects.forEach(p=>{const u=getLatestUpdateFiltered(p.id,yearF,qF);const s=u?computeStatus(p,u.progress,u.year,u.quarter):'ยังไม่รายงาน';const prog=u?u.progress:0;totalProgress+=prog;if(s==='ตามแผน')ontrack++;else if(s==='ต่ำกว่าแผน')below++;else if(s==='ล่าช้า')late++;else if(s==='วิกฤติ')crisis++;else unreported++;});
+  // ★ FIX: ใช้ getStatusFiltered/getProgressFiltered เดียวกับหน้าอื่นทั้งหมด เพื่อให้สถานะตรงกัน
+  projects.forEach(p=>{const s=getStatusFiltered(p.id,yearF,qF);const prog=getProgressFiltered(p.id,yearF,qF);totalProgress+=prog;if(s==='ตามแผน')ontrack++;else if(s==='ต่ำกว่าแผน')below++;else if(s==='ล่าช้า')late++;else if(s==='วิกฤติ')crisis++;else unreported++;});
   document.getElementById('statsGrid').innerHTML=`
     <div class="stat-card info"><div class="stat-label">โครงการทั้งหมด</div><div class="stat-value" style="color:var(--info)">${total}</div><div class="stat-sub">โครงการ</div></div>
     <div class="stat-card danger"><div class="stat-label">🔴 วิกฤติ</div><div class="stat-value" style="color:var(--danger)">${crisis}</div><div class="stat-sub">โครงการ</div></div>
@@ -1354,21 +1386,24 @@ function renderProjectTable(){
     _years.forEach(yr=>{const o=document.createElement('option');o.value=yr;o.textContent='พ.ศ. '+yr;_yf.appendChild(o);});
     if(_curY&&_years.includes(_curY))_yf.value=_curY;
   }
+  populateOrgFilterDropdown('filterOrg');
   const search=(document.getElementById('searchProj')?.value||'').toLowerCase();
   const planF=document.getElementById('filterPlan')?.value||'';
   const stratF=document.getElementById('filterStrategy')?.value||'';
   const indF=document.getElementById('filterIndicator')?.value||'';
   const statusF=document.getElementById('filterStatus')?.value||'';
   const yearF=document.getElementById('filterYear')?.value||'';
+  const orgF=document.getElementById('filterOrg')?.value||'';
   let filtered=DB.projects.filter(p=>{
     const inS=!search||p.name.toLowerCase().includes(search)||(p.owner||'').toLowerCase().includes(search);
     const inP=!planF||p.plan===planF;
     const inSt2=!stratF||(p.strategy||'')===stratF;
     const inInd=!indF||(p.indicator||'')===indF;
     const inY=!yearF||String(p.planYear||p.startYear||'')===String(yearF);
+    const inOrg=projectHasOrg(p,orgF);
     const eff_s=yearF?getStatusFiltered(p.id,yearF,''):getStatus(p.id);
     const inSt=!statusF||eff_s===statusF;
-    return inS&&inP&&inSt2&&inInd&&inY&&inSt;
+    return inS&&inP&&inSt2&&inInd&&inY&&inOrg&&inSt;
   });
   const tbody=document.getElementById('projectTableBody');
   tbody.innerHTML=filtered.length?filtered.map((p,idx)=>{
@@ -1400,6 +1435,7 @@ function renderQuarterlySummary(){
       lists.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v.substring(0,50);el.appendChild(o);});
     }
   });
+  populateOrgFilterDropdown('qtrFilterOrg');
   const pSel=document.getElementById('qtrFilterProject');
   if(pSel&&pSel.options.length<=1){DB.projects.forEach(p=>{const o=document.createElement('option');o.value=p.id;o.textContent=p.name.substring(0,60);pSel.appendChild(o);});}
   const yearF=document.getElementById('qtrFilterYear')?.value||'';
@@ -1407,11 +1443,13 @@ function renderQuarterlySummary(){
   const stratF=document.getElementById('qtrFilterStrategy')?.value||'';
   const indF=document.getElementById('qtrFilterIndicator')?.value||'';
   const projF=document.getElementById('qtrFilterProject')?.value||'';
+  const orgF=document.getElementById('qtrFilterOrg')?.value||'';
   let projects=DB.projects.filter(p=>{
     const inY=!yearF||String(p.planYear||p.startYear)===String(yearF);
     const inP=!planF||p.plan===planF;const inSt=!stratF||p.strategy===stratF;
     const inI=!indF||p.indicator===indF;const inPr=!projF||p.id===projF;
-    return inY&&inP&&inSt&&inI&&inPr;
+    const inOrg=projectHasOrg(p,orgF);
+    return inY&&inP&&inSt&&inI&&inPr&&inOrg;
   });
   const qLabels=['','Q1 (ต.ค.–ธ.ค.)','Q2 (ม.ค.–มี.ค.)','Q3 (เม.ย.–มิ.ย.)','Q4 (ก.ค.–ก.ย.)'];
   const container=document.getElementById('quarterlyCardsContainer');
@@ -1562,7 +1600,7 @@ function clearSearch(){
 }
 
 function resetUpdFilters(){
-  ['updFilterPlan','updFilterStrategy','updFilterIndicator','updFilterStatus'].forEach(id=>{
+  ['updFilterPlan','updFilterStrategy','updFilterIndicator','updFilterOrg','updFilterStatus'].forEach(id=>{
     const el=document.getElementById(id);if(el)el.value='';
   });
   const si=document.getElementById('updSearchInput');if(si)si.value='';
@@ -1571,19 +1609,22 @@ function resetUpdFilters(){
 }
 
 function renderProjectPicker(){
+  populateOrgFilterDropdown('updFilterOrg');
   const year=document.getElementById('updYear').value;
   const text=(document.getElementById('updSearchInput')?.value||'').toLowerCase().trim();
   const planF=document.getElementById('updFilterPlan')?.value||'';
   const stratF=document.getElementById('updFilterStrategy')?.value||'';
   const indF=document.getElementById('updFilterIndicator')?.value||'';
+  const orgF=document.getElementById('updFilterOrg')?.value||'';
   const statF=document.getElementById('updFilterStatus')?.value||'';
   const clr=document.getElementById('updSearchClear');if(clr)clr.style.display=text?'block':'none';
   let projects=DB.projects.filter(p=>{
     const inPlan=!planF||p.plan===planF;
     const inStrat=!stratF||(p.strategy||'')===stratF;
     const inInd=!indF||(p.indicator||'')===indF;
+    const inOrg=projectHasOrg(p,orgF);
     const inText=!text||p.name.toLowerCase().includes(text)||(p.owner||'').toLowerCase().includes(text)||(p.plan||'').toLowerCase().includes(text);
-    return inPlan&&inStrat&&inInd&&inText;
+    return inPlan&&inStrat&&inInd&&inOrg&&inText;
   });
   if(statF)projects=projects.filter(p=>getStatusFiltered(p.id,year,'')===statF);
   const count=document.getElementById('updResultCount');
