@@ -2037,8 +2037,9 @@ function renderQuarterCards(p,year){
     const hasExisting=!!existing;
     // ★ ข้อ 3.1: ไตรมาสที่แอดมินปิดไว้ (หรือหมดช่วงเวลาที่กำหนด) จะกรอก/แก้ไขไม่ได้ ไม่ว่าจะเป็นแอดมินหรือผู้ใช้ทั่วไป
     const windowClosed=!isWindowOpenClient(q);
-    // ★ ข้อ 1: ไตรมาสที่มีข้อมูลแล้ว — ผู้ใช้ทั่วไปแก้ไขไม่ได้ แต่ Admin แก้ไขได้เสมอ (เว้นแต่ช่วงเวลาปิดอยู่)
-    const isLockedForUser=windowClosed||(hasExisting&&!userIsAdmin);
+    // ★ ปรับปรุง: ไตรมาสที่มีข้อมูลอยู่แล้ว "ผู้ใช้งานทุกคน" สามารถแก้ไขได้เอง (ไม่ใช่แค่ Admin)
+    // ยังคงล็อกเฉพาะกรณีช่วงเวลาที่แอดมินกำหนดปิดอยู่เท่านั้น
+    const isLockedForUser=windowClosed;
     const exStatus=hasExisting?existing.status:'';
     const exProg=hasExisting?existing.progress:0;
     const exRatio=hasExisting?computeRatio(p,existing.progress,year,q):null;
@@ -2048,7 +2049,7 @@ function renderQuarterCards(p,year){
       <div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
           <span>📋 ผลที่กรอกล่าสุด — ${thaiDate(existing.timestamp)}</span>
-          ${windowClosed?'<span style="background:#f3f4f6;color:#6b7280;border-radius:10px;padding:2px 8px;font-weight:600;">🔒 ปิดรับกรอกอยู่</span>':(isLockedForUser?'<span style="background:#f3f4f6;color:#6b7280;border-radius:10px;padding:2px 8px;font-weight:600;">🔒 แก้ไขไม่ได้</span>':(hasExisting&&userIsAdmin?'<span style="background:#fff3e0;color:#e65100;border-radius:10px;padding:2px 8px;font-weight:600;">👑 Admin แก้ไขได้</span>':''))}
+          ${windowClosed?'<span style="background:#f3f4f6;color:#6b7280;border-radius:10px;padding:2px 8px;font-weight:600;">🔒 ปิดรับกรอกอยู่</span>':'<span style="background:#e8f5ee;color:#1a7a4c;border-radius:10px;padding:2px 8px;font-weight:600;">✏️ แก้ไขได้</span>'}
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <div>
@@ -2066,7 +2067,7 @@ function renderQuarterCards(p,year){
         ${existing.activity?`<div style="margin-top:8px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px;"><strong>ผลดำเนินงาน:</strong> ${existing.activity.substring(0,120)}${existing.activity.length>120?'…':''}</div>`:''}
       </div>`:'';
     const cardLockedClass=isLockedForUser?' q-card-readonly':'';
-    const lockMsg=windowClosed?'🔒 ไตรมาสนี้ปิดรับการกรอก/แก้ไขข้อมูลอยู่ในขณะนี้ (ผู้ดูแลระบบเป็นผู้กำหนดช่วงเวลา)':'🔒 ไตรมาสนี้กรอกข้อมูลแล้ว ไม่สามารถแก้ไขได้ (ติดต่อผู้ดูแลระบบหากต้องการแก้ไข)';
+    const lockMsg='🔒 ไตรมาสนี้ปิดรับการกรอก/แก้ไขข้อมูลอยู่ในขณะนี้ (ผู้ดูแลระบบเป็นผู้กำหนดช่วงเวลา)';
     const clickHandler=isLockedForUser?`onclick="showToast('${lockMsg}','red')"`:`onclick="selectQCard(${q})"`;
     return `<div class="q-card${cardLockedClass}" id="qcard_${q}" data-locked="${isLockedForUser}" ${clickHandler}>
       <div class="q-card-header">
@@ -2077,8 +2078,8 @@ function renderQuarterCards(p,year){
         <div class="q-target-chip">🎯 เป้าหมายไตรมาสนี้: ${target}%</div>
         ${existingSummary}
         ${isLockedForUser
-          ?`<div class="q-placeholder" style="padding:10px 0;font-size:13px;color:var(--text-muted);text-align:center;">${windowClosed?'🔒 ปิดรับการกรอกอยู่ในขณะนี้':'🔒 ไตรมาสนี้กรอกข้อมูลแล้ว — แก้ไขไม่ได้'}</div>`
-          :`<div class="q-placeholder" style="padding:6px 0;font-size:13px;color:var(--text-muted);">👆 คลิกเพื่อ${hasExisting?'แก้ไข (Admin)':'เปิดฟอร์มกรอก'}</div>`
+          ?`<div class="q-placeholder" style="padding:10px 0;font-size:13px;color:var(--text-muted);text-align:center;">🔒 ปิดรับการกรอกอยู่ในขณะนี้</div>`
+          :`<div class="q-placeholder" style="padding:6px 0;font-size:13px;color:var(--text-muted);">👆 คลิกเพื่อ${hasExisting?'แก้ไขข้อมูล':'เปิดฟอร์มกรอก'}</div>`
         }
         <div class="q-lock-msg">🔒 ปิดอยู่</div>
         <div class="q-form-area">
@@ -2150,7 +2151,7 @@ function selectQCard(q){
   // ★ ป้องกันการเลือกไตรมาสที่ถูก lock (เผื่อกรณีเรียกผ่าน setTimeout จาก selectedQuarter)
   const targetCard=document.getElementById('qcard_'+q);
   if(targetCard&&targetCard.dataset.locked==='true'){
-    showToast('🔒 ไตรมาสนี้กรอกข้อมูลแล้ว ไม่สามารถแก้ไขได้','red');
+    showToast('🔒 ไตรมาสนี้ปิดรับการกรอก/แก้ไขข้อมูลอยู่ในขณะนี้','red');
     return;
   }
   selectedQuarter=q;
@@ -2212,12 +2213,8 @@ async function submitUpdate(){
     showToast('🔒 ไตรมาสนี้ปิดรับการกรอก/แก้ไขข้อมูลอยู่ในขณะนี้ (ผู้ดูแลระบบเป็นผู้กำหนดช่วงเวลา)','red');
     return;
   }
-  // ★ ข้อ 1: ป้องกันการบันทึกซ้อนไตรมาสที่มีข้อมูลแล้ว ถ้าไม่ใช่ Admin (double-check ก่อน submit จริง)
-  const _existingQ=DB.updates.filter(u=>u.projectId===projectId&&String(u.quarter)===String(q)&&String(u.year)===String(year));
-  if(_existingQ.length>0&&!isAdmin()){
-    showToast('🔒 ไตรมาสนี้กรอกข้อมูลแล้ว ไม่สามารถแก้ไขได้ (เฉพาะผู้ดูแลระบบเท่านั้นที่แก้ไขได้)','red');
-    return;
-  }
+  // ★ ปรับปรุง: ผู้ใช้งานทุกคนสามารถแก้ไขไตรมาสที่กรอกไปแล้วได้เอง (เดิมจำกัดเฉพาะ Admin)
+  // ยังคงล็อกด้วยช่วงเวลาเปิด/ปิดที่แอดมินกำหนด (ตรวจไปแล้วด้านบน)
   const activity=(document.getElementById('upd_activity_'+q)?.value||'').trim();
   if(!activity){showToast('กรุณากรอกผลการดำเนินงาน','red');return;}
   // อ่านจาก number input ก่อน แล้ว fallback ไป slider
