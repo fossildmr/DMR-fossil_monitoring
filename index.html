@@ -188,6 +188,7 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);fon
 .progress-bar{height:100%;border-radius:20px;transition:width .5s ease}
 .progress-bar.success{background:var(--success)}.progress-bar.warning{background:var(--warning)}
 .progress-bar.danger{background:var(--danger)}.progress-bar.info{background:var(--info)}
+.progress-bar.gray{background:#bdc3c7}
 
 /* ── TABLE ── */
 .table-wrap{overflow-x:auto}
@@ -1602,7 +1603,7 @@ function renderDashboard(){
   const planCounts=DB.plans.map(plan=>projects.filter(p=>p.plan===plan).length);
   chartPlanCount=new Chart(planCountCtx,{type:'bar',data:{labels:planLabels,datasets:[{label:'จำนวนโครงการ',data:planCounts,backgroundColor:planColors.slice(0,DB.plans.length),borderRadius:8,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,ticks:{stepSize:1,precision:0}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.x+' โครงการ'}}}}});
   const sorted=[...projects].sort((a,b)=>getProgressFiltered(b.id,yearF,qF)-getProgressFiltered(a.id,yearF,qF)).slice(0,8);
-  document.getElementById('dashProjectList').innerHTML=sorted.length?sorted.map(p=>{const prog=getProgressFiltered(p.id,yearF,qF);const s=getStatusFiltered(p.id,yearF,qF);return `<div style="margin-bottom:12px;cursor:pointer;" onclick="viewProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:13px;font-weight:500;">${p.name}</span><div style="display:flex;gap:8px;align-items:center;"><span class="badge badge-${statusColor(s)}">${s}</span><span style="font-size:13px;font-weight:700;min-width:36px;text-align:right;">${prog}%</span></div></div><div class="progress-wrap"><div class="progress-bar ${progressBarClass(prog)}" style="width:${prog}%"></div></div></div>`;}).join(''):'<div class="empty-state"><div class="empty-state-icon">📋</div><p>ยังไม่มีโครงการ</p></div>';
+  document.getElementById('dashProjectList').innerHTML=sorted.length?sorted.map(p=>{const prog=getProgressFiltered(p.id,yearF,qF);const s=getStatusFiltered(p.id,yearF,qF);return `<div style="margin-bottom:12px;cursor:pointer;" onclick="viewProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:13px;font-weight:500;">${p.name}</span><div style="display:flex;gap:8px;align-items:center;"><span class="badge badge-${statusColor(s)}">${s}</span><span style="font-size:13px;font-weight:700;min-width:36px;text-align:right;">${prog}%</span></div></div><div class="progress-wrap"><div class="progress-bar ${statusColor(s)}" style="width:${prog}%"></div></div></div>`;}).join(''):'<div class="empty-state"><div class="empty-state-icon">📋</div><p>ยังไม่มีโครงการ</p></div>';
 }
 
 // ═══════════════════════════════════════════════════
@@ -1655,7 +1656,7 @@ function renderProjectTable(){
       <td style="font-size:13px;white-space:nowrap;">พ.ศ. ${p.planYear||p.startYear||'—'}</td>
       <td style="font-size:13px;white-space:nowrap;">${thaiMonthShort(p.startMonth)} ${p.startYear||''}</td>
       <td style="font-size:13px;white-space:nowrap;">${thaiMonthShort(p.endMonth)} ${p.endYear||''}</td>
-      <td style="min-width:160px;"><div class="pct-cell"><span class="pct-num" style="color:${prog>=70?'var(--success)':prog>=40?'var(--warning)':'var(--danger)'};">${prog}%</span><div class="progress-wrap" style="flex:1;"><div class="progress-bar ${progressBarClass(prog)}" style="width:${prog}%"></div></div></div></td>
+      <td style="min-width:160px;"><div class="pct-cell"><span class="pct-num" style="color:var(--${statusColor(s)==='gray'?'text-muted':statusColor(s)});">${prog}%</span><div class="progress-wrap" style="flex:1;"><div class="progress-bar ${statusColor(s)}" style="width:${prog}%"></div></div></div></td>
       <td><span class="badge badge-${statusColor(s)}">${s}</span></td>
       <td class="no-print" style="white-space:nowrap;">${manageBtns}</td>
     </tr>`;
@@ -2031,10 +2032,20 @@ function renderQuarterCards(p,year){
   const container=document.getElementById('quarterCardsContainer');
   pendingFiles={1:[],2:[],3:[],4:[]};
   const userIsAdmin=isAdmin();
+  // ★ ข้อ 1.1 (เพิ่มเติม): คำนวณผลรวม % ของไตรมาสอื่น ๆ ในปีเดียวกัน เพื่อจำกัดโควตาสูงสุดที่กรอกได้ในแต่ละไตรมาสแบบ real-time
+  // เช่น Q1=50%, Q2=15%, Q3=10% (รวม 75%) → Q4 กรอกได้สูงสุดไม่เกิน 25%
+  const latestByQ={};
+  DB.updates.filter(u=>u.projectId===p.id&&String(u.year)===String(year)).forEach(u=>{
+    const uq=Number(u.quarter);
+    if(!latestByQ[uq]||u.timestamp>latestByQ[uq].timestamp)latestByQ[uq]=u;
+  });
   container.innerHTML=[1,2,3,4].map(q=>{
     const target=getQuarterTarget(p,parseInt(year),q);
     const existing=DB.updates.filter(u=>u.projectId===p.id&&String(u.quarter)===String(q)&&String(u.year)===String(year)).sort((a,b)=>b.timestamp-a.timestamp)[0];
     const hasExisting=!!existing;
+    // ★ ข้อ 1.1: ผลรวม % ของไตรมาสอื่น (ไม่รวมไตรมาสนี้) → ใช้จำกัดโควตาสูงสุดที่กรอกได้ของไตรมาสนี้
+    const otherSum=[1,2,3,4].filter(i=>i!==q).reduce((s,i)=>s+(latestByQ[i]?Number(latestByQ[i].progress)||0:0),0);
+    const maxAllowed=Math.max(0,100-otherSum);
     // ★ ข้อ 3.1: ไตรมาสที่แอดมินปิดไว้ (หรือหมดช่วงเวลาที่กำหนด) จะกรอก/แก้ไขไม่ได้ ไม่ว่าจะเป็นแอดมินหรือผู้ใช้ทั่วไป
     const windowClosed=!isWindowOpenClient(q);
     // ★ ปรับปรุง: ไตรมาสที่มีข้อมูลอยู่แล้ว "ผู้ใช้งานทุกคน" สามารถแก้ไขได้เอง (ไม่ใช่แค่ Admin)
@@ -2086,11 +2097,14 @@ function renderQuarterCards(p,year){
           <div class="form-group" style="margin-bottom:12px;">
             <label class="form-label required" style="font-size:12px;">% ผลการดำเนินงานของไตรมาสนี้ (เฉพาะไตรมาสนี้เท่านั้น)</label>
             <div class="progress-slider-wrap">
-              <input type="range" id="upd_prog_${q}" min="0" max="100" value="${hasExisting?exProg:0}" oninput="onQProgInput(${q},this.value)">
-              <div class="progress-big-num" id="upd_progval_${q}">${hasExisting?exProg:0}%</div>
+              <input type="range" id="upd_prog_${q}" min="0" max="${maxAllowed}" value="${Math.min(hasExisting?exProg:0,maxAllowed)}" oninput="onQProgInput(${q},this.value)">
+              <div class="progress-big-num" id="upd_progval_${q}">${Math.min(hasExisting?exProg:0,maxAllowed)}%</div>
             </div>
             <div style="text-align:right;margin-top:2px;">
-              <input type="number" min="0" max="100" id="upd_prog_num_${q}" value="${hasExisting?exProg:0}" style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;" oninput="syncSlider(${q},this.value)"> %
+              <input type="number" min="0" max="${maxAllowed}" id="upd_prog_num_${q}" value="${Math.min(hasExisting?exProg:0,maxAllowed)}" style="width:70px;padding:4px 8px;border:1.5px solid var(--border);border-radius:6px;font-size:13px;text-align:center;" oninput="syncSlider(${q},this.value)"> %
+            </div>
+            <div style="font-size:11px;color:${otherSum>0?'var(--warning)':'var(--text-muted)'};margin-top:4px;">
+              ${otherSum>0?`📊 ไตรมาสอื่นรวมกันแล้ว ${otherSum}% → ไตรมาสนี้กรอกได้สูงสุด <strong>${maxAllowed}%</strong>`:'ยังไม่มีไตรมาสอื่นรายงาน → กรอกได้สูงสุด 100%'}
             </div>
             <div id="upd_status_${q}" style="margin-top:8px;padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;"></div>
           </div>
@@ -2125,8 +2139,10 @@ function renderQuarterCards(p,year){
 }
 
 function syncSlider(q,val){
-  const v=Math.min(Math.max(parseInt(val)||0,0),100);
-  const slider=document.getElementById('upd_prog_'+q);if(slider)slider.value=v;
+  const slider=document.getElementById('upd_prog_'+q);
+  const maxQ=slider?Number(slider.max)||100:100;
+  const v=Math.min(Math.max(parseInt(val)||0,0),maxQ);
+  if(slider)slider.value=v;
   const num=document.getElementById('upd_prog_num_'+q);if(num)num.value=v;
   document.getElementById('upd_progval_'+q).textContent=v+'%';
   updateQStatusPreview(q);
@@ -2164,7 +2180,9 @@ function selectQCard(q){
   updateQStatusPreview(q);
 }
 function onQProgInput(q,val){
-  const v=Math.min(Math.max(parseInt(val)||0,0),100);
+  const slider=document.getElementById('upd_prog_'+q);
+  const maxQ=slider?Number(slider.max)||100:100;
+  const v=Math.min(Math.max(parseInt(val)||0,0),maxQ);
   document.getElementById('upd_progval_'+q).textContent=v+'%';
   const num=document.getElementById('upd_prog_num_'+q);if(num)num.value=v;
   updateQStatusPreview(q);
