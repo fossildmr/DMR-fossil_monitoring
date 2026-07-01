@@ -1933,7 +1933,7 @@ function renderProjectPicker(){
           <span style="font-size:22px;font-weight:800;color:${annColor};">${ann.actual!==null?ann.actual+'%':'—'}</span>
         </div>
       </div>
-      <div class="progress-wrap" style="margin-bottom:10px;height:5px;"><div class="progress-bar ${progressBarClass(annProg)}" style="width:${annProg}%;height:5px;"></div></div>
+      <div class="progress-wrap" style="margin-bottom:10px;height:5px;"><div class="progress-bar ${sC}" style="width:${annProg}%;height:5px;"></div></div>
       <div style="display:flex;gap:6px;align-items:stretch;">
         ${qBadges}
         <button onclick="event.stopPropagation();pickProject('${p.id}')"
@@ -2074,7 +2074,7 @@ function renderQuarterCards(p,year){
             <div style="font-size:11px;color:var(--text-muted);margin-top:4px;">${exRatio!==null?exRatio+'% ของแผน':''}</div>
           </div>
           <div style="flex:1;min-width:100px;">
-            <div class="progress-wrap" style="height:8px;"><div class="progress-bar ${progressBarClass(exProg)}" style="width:${Math.min(exProg,100)}%;height:8px;"></div></div>
+            <div class="progress-wrap" style="height:8px;"><div class="progress-bar ${statusC}" style="width:${Math.min(exProg,100)}%;height:8px;"></div></div>
           </div>
         </div>
         ${existing.activity?`<div style="margin-top:8px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px;"><strong>ผลดำเนินงาน:</strong> ${existing.activity.substring(0,120)}${existing.activity.length>120?'…':''}</div>`:''}
