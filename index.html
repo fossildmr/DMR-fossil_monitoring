@@ -110,10 +110,10 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);fon
     linear-gradient(180deg,
       #eef5ee 0%,
       #dbe9da 30%,
-      #c3d9c4 40%,
-      #8fb593 48%,
-      #54886c 64%,
-      #399171 80%
+      #c3d9c4 50%,
+      #8fb593 68%,
+      #54886c 84%,
+      #399171 100%
     );
   box-shadow:4px 0 20px rgba(0,0,0,.10);
   border-top:3px solid #C8892A;
@@ -140,16 +140,20 @@ body{font-family:'Sarabun',sans-serif;background:var(--bg);color:var(--text);fon
   mask-image:linear-gradient(180deg, transparent 0, rgba(0,0,0,.7) 80px, rgba(0,0,0,1) 160px);
 }
 .sidebar > *{position:relative;z-index:1}
-.sidebar-header{padding:16px 20px 8px;font-size:11px;font-weight:700;color:#0A3D2A;opacity:.6;letter-spacing:.08em;text-transform:uppercase}
+/* ★ เพิ่มความชัดเจนของตัวหนังสือใน sidebar — ตัวหนาขึ้น สีเข้มขึ้น และมี text-shadow บาง ๆ
+   ช่วยให้อ่านง่ายแม้พื้นหลังไล่สีจากอ่อนไปเข้ม หรือทับลวดลายพื้นหลัง */
+.sidebar-header{padding:16px 20px 8px;font-size:11.5px;font-weight:800;color:#062A1D;opacity:.92;letter-spacing:.08em;text-transform:uppercase;text-shadow:0 1px 2px rgba(255,255,255,.5)}
 .nav-tab{
   width:calc(100% - 24px);margin:3px 12px;
   display:flex;align-items:center;justify-content:flex-start;gap:10px;
-  padding:11px 14px;border:none;background:transparent;
-  color:#0A3D2A;font-family:'Sarabun',sans-serif;font-size:14px;font-weight:500;
+  padding:11px 14px;border:none;background:rgba(255,255,255,.30);
+  color:#062A1D;font-family:'Sarabun',sans-serif;font-size:14.5px;font-weight:700;
   cursor:pointer;transition:all .2s;border-radius:10px;
+  text-shadow:0 1px 1px rgba(255,255,255,.45);
+  box-shadow:0 1px 2px rgba(0,0,0,.05);
 }
-.nav-tab:hover{background:rgba(255,255,255,.5)}
-.nav-tab.active{background:#fff;color:#0A3D2A;font-weight:700;box-shadow:0 2px 8px rgba(0,0,0,.1);border-left:3px solid #C8892A;padding-left:11px}
+.nav-tab:hover{background:rgba(255,255,255,.65)}
+.nav-tab.active{background:#fff;color:#062A1D;font-weight:800;box-shadow:0 2px 8px rgba(0,0,0,.15);border-left:3px solid #C8892A;padding-left:11px;text-shadow:none;}
 .nav-tab .nav-icon{width:20px;text-align:center;font-size:16px}
 .nav-sep{height:1px;background:rgba(10,61,42,.15);margin:8px 16px}
 
@@ -498,6 +502,9 @@ select.form-control{cursor:pointer}
   <div class="page-header">
     <div><div class="page-title">📊 ภาพรวมแผนปฏิบัติการ</div><div class="page-sub" id="dashLastUpdate">อัปเดตล่าสุด: —</div></div>
     <div style="display:flex;gap:8px;flex-wrap:wrap;" class="no-print">
+      <select class="form-control" style="width:auto;font-size:13px;" id="dashPlanFilter" onchange="renderDashboard()">
+        <option value="">ทุกแผนปฏิบัติการ</option>
+      </select>
       <select class="form-control" style="width:auto;font-size:13px;" id="dashOrgFilter" onchange="renderDashboard()">
         <option value="">ทุกหน่วยงาน</option>
       </select>
@@ -521,6 +528,10 @@ select.form-control{cursor:pointer}
       <div class="card-body" style="height:240px;display:flex;align-items:center;justify-content:center;"><canvas id="chartStrategy" style="max-height:220px;"></canvas></div>
     </div>
   </div>
+  <div class="card" style="margin-bottom:20px;">
+    <div class="card-header"><span class="card-title">จำนวนโครงการแยกตามแผนปฏิบัติการ</span></div>
+    <div class="card-body" style="height:260px;display:flex;align-items:center;justify-content:center;"><canvas id="chartPlanCount" style="max-height:240px;"></canvas></div>
+  </div>
   <div class="card">
     <div class="card-header">
       <span class="card-title">ความคืบหน้าโครงการ (เรียงตาม %)</span>
@@ -533,7 +544,7 @@ select.form-control{cursor:pointer}
 <!-- ── PROJECTS ── -->
 <div id="page-projects" class="page">
   <div class="page-header">
-    <div><div class="page-title">📋 โครงการทั้งหมด</div></div>
+    <div><div class="page-title">📋 โครงการทั้งหมด</div><div class="page-sub">📌 โครงการที่ท่าน/หน่วยงานของท่านรับผิดชอบ</div></div>
     <div id="syncStatusBadge"></div>
   </div>
   <div class="filter-bar no-print" style="flex-wrap:wrap;">
@@ -564,6 +575,28 @@ select.form-control{cursor:pointer}
           </tr>
         </thead>
         <tbody id="projectTableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ★ ข้อ 2: โครงการอื่นๆ ในระบบ (หน่วยงานอื่นรับผิดชอบ) — แสดงเฉพาะข้อมูลพื้นฐาน -->
+  <div class="page-header" style="margin-top:24px;">
+    <div><div class="page-title" style="font-size:16px;">📁 โครงการอื่นๆ ในระบบ <span id="otherProjCount" style="font-size:13px;color:var(--text-muted);font-weight:400;"></span></div>
+    <div class="page-sub">โครงการที่หน่วยงานอื่นรับผิดชอบ — แสดงเฉพาะข้อมูลพื้นฐาน</div></div>
+  </div>
+  <div class="card">
+    <div class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40px;">#</th>
+            <th>ชื่อโครงการ</th>
+            <th>แผนปฏิบัติการ</th>
+            <th>แนวทางการพัฒนา</th>
+            <th>เป้าหมาย/ตัวชี้วัด</th>
+          </tr>
+        </thead>
+        <tbody id="otherProjectTableBody"></tbody>
       </table>
     </div>
   </div>
@@ -737,6 +770,18 @@ select.form-control{cursor:pointer}
     </div>
     <div id="gsheetsNotice" class="admin-only" style="margin-bottom:12px;"></div>
 
+    <!-- ★ ข้อ 3.1: แผงควบคุมแอดมิน — เปิด/ปิด หรือกำหนดช่วงเวลาที่อนุญาตให้กรอก/แก้ไขความคืบหน้ารายไตรมาส -->
+    <div class="card admin-only" style="margin-bottom:14px;">
+      <div class="card-header">
+        <span class="card-title">🛠️ ควบคุมช่วงเวลาการกรอกความคืบหน้า (เฉพาะผู้ดูแลระบบ)</span>
+      </div>
+      <div class="card-body">
+        <p style="font-size:12px;color:var(--text-muted);margin-bottom:12px;">เปิด/ปิด หรือกำหนดช่วงวันที่ที่อนุญาตให้กรอก/แก้ไขข้อมูลของแต่ละไตรมาส — ถ้าปิดไว้ จะไม่สามารถกรอกหรือแก้ไขไตรมาสนั้นได้ไม่ว่าผู้ใช้ทั่วไปหรือผู้ดูแลระบบ</p>
+        <div id="progressWindowRows" style="display:flex;flex-direction:column;gap:10px;"></div>
+        <button class="btn btn-primary" style="margin-top:12px;" onclick="saveProgressWindowsSettings()">💾 บันทึกการตั้งค่า</button>
+      </div>
+    </div>
+
     <!-- ปี + ผู้รายงาน -->
     <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-bottom:14px;">
       <div style="display:flex;align-items:center;gap:8px;">
@@ -850,8 +895,16 @@ select.form-control{cursor:pointer}
   <div class="page-header"><div class="page-title">⚠️ การแจ้งเตือนโครงการ</div></div>
   <div class="google-callout admin-only" style="border-color:var(--info);background:var(--info-light);">
     <h4 style="color:var(--info);">📧 อีเมลแจ้งเตือนอัตโนมัติ</h4>
-    <p>เมื่อมีโครงการสถานะ <strong>ล่าช้า</strong> หรือ <strong>วิกฤติ</strong> ระบบส่งอีเมลแจ้งเตือนโดยอัตโนมัติ<br>
-    <code>fossildmrmanagement@gmail.com</code> &nbsp; <code>fossildmr30@gmail.com</code></p>
+    <p>ระบบส่งอีเมลแจ้งเตือนโดยอัตโนมัติทันทีเมื่อมีการรายงานความคืบหน้าที่ได้สถานะตรงกับที่เลือกไว้ด้านล่าง (ค่าเริ่มต้น: <strong>ต่ำกว่าแผน</strong>, <strong>ล่าช้า</strong>, <strong>วิกฤติ</strong>)<br>
+    <code>fossildmrmanagement@gmail.com</code> &nbsp; <code>fossildmr30@gmail.com</code><br>
+    <span style="font-size:12px;">* ไม่มีการสรุปแจ้งเตือนอัตโนมัติทุกวัน 08:00 น. อีกต่อไป — อีเมลจะถูกส่งเฉพาะตอนมีการรายงานเข้าเงื่อนไขเท่านั้น</span></p>
+  </div>
+  <div class="card admin-only" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">🚦 สถานะที่ต้องการให้แจ้งเตือน</span></div>
+    <div class="card-body">
+      <div id="alertStatusChecks" style="display:flex;gap:18px;flex-wrap:wrap;margin-bottom:12px;"></div>
+      <button class="btn btn-primary" onclick="saveAlertStatusSettings()">💾 บันทึกสถานะที่ต้องการแจ้งเตือน</button>
+    </div>
   </div>
   <div class="card admin-only" style="margin-bottom:16px;">
     <div class="card-header"><span class="card-title">⚙️ อีเมลแจ้งเตือนเพิ่มเติม</span></div>
@@ -1194,18 +1247,18 @@ async function submitForgotPassword(){
 // DATA STORE
 // ═══════════════════════════════════════════════════
 let DB={
-  projects:[],updates:[],orgs:[],
+  projects:[],allProjects:[],updates:[],orgs:[],
   plans:['แผนปฏิบัติการ เรื่องที่ 1: การสำรวจ ศึกษา วิจัยแหล่งซากดึกดำบรรพ์และซากดึกดำบรรพ์','แผนปฏิบัติการ เรื่องที่ 2: การบริหารจัดการแหล่งซากดึกดำบรรพ์และซากดึกดำบรรพ์','แผนปฏิบัติการ เรื่องที่ 3: การพัฒนาแหล่งเรียนรู้ด้านซากดึกดำบรรพ์','แผนปฏิบัติการ เรื่องที่ 4: การพัฒนากฎหมาย'],
   strategies:[],
   indicators:['เป้าหมาย/ตัวชี้วัดที่ 1.1','เป้าหมาย/ตัวชี้วัดที่ 1.2','เป้าหมาย/ตัวชี้วัดที่ 1.3','เป้าหมาย/ตัวชี้วัดที่ 2.1','เป้าหมาย/ตัวชี้วัดที่ 3.1','เป้าหมาย/ตัวชี้วัดที่ 3.2','เป้าหมาย/ตัวชี้วัดที่ 4.1'],
-  alertEmails:[],users:[],lastUpdated:null
+  alertEmails:[],alertOnStatuses:['ต่ำกว่าแผน','ล่าช้า','วิกฤติ'],users:[],lastUpdated:null
 };
 let pendingFiles={};// keyed by quarter: {1:[], 2:[], 3:[], 4:[]}
 let selectedQuarter=null;
-let chartStatus,chartStrategy,chartDetail;
+let chartStatus,chartStrategy,chartDetail,chartPlanCount;
 
 function saveLocalCache(){const t=JSON.parse(JSON.stringify(DB));t.updates=t.updates.map(u=>({...u,files:(u.files||[]).map(f=>({name:f.name,size:f.size,type:f.type,driveLink:f.driveLink||''}))}));localStorage.setItem('fossilPlanDB',JSON.stringify(t));}
-function loadLocalCache(){const raw=localStorage.getItem('fossilPlanDB');if(!raw)return false;try{const d=JSON.parse(raw);DB=d;if(!DB.plans)DB.plans=[];if(!DB.strategies)DB.strategies=[];if(!DB.indicators)DB.indicators=[];if(!DB.alertEmails)DB.alertEmails=[];if(!DB.users)DB.users=[];return true;}catch{return false;}}
+function loadLocalCache(){const raw=localStorage.getItem('fossilPlanDB');if(!raw)return false;try{const d=JSON.parse(raw);DB=d;if(!DB.plans)DB.plans=[];if(!DB.strategies)DB.strategies=[];if(!DB.indicators)DB.indicators=[];if(!DB.alertEmails)DB.alertEmails=[];if(!DB.alertOnStatuses||!DB.alertOnStatuses.length)DB.alertOnStatuses=['ต่ำกว่าแผน','ล่าช้า','วิกฤติ'];if(!DB.users)DB.users=[];if(!DB.allProjects)DB.allProjects=DB.projects||[];if(!DB.progressWindows)DB.progressWindows=null;return true;}catch{return false;}}
 
 // ═══════════════════════════════════════════════════
 // SYNC
@@ -1224,6 +1277,9 @@ async function pullFromSheets(silent=false){
     if(!data.ok)throw new Error(data.error||'getAll ล้มเหลว');
     if(Array.isArray(data.orgs))DB.orgs=data.orgs;
     if(Array.isArray(data.projects)){
+      // ★ ข้อ 2: เก็บสำเนาโครงการ "ทั้งหมดในระบบ" แบบไม่กรอง ไว้ใช้ในหน้า "โครงการทั้งหมด"
+      // (ส่วนล่าง — โครงการของหน่วยงานอื่น) โดยไม่กระทบ DB.projects ที่หน้าอื่น ๆ ยังใช้ scope ตามหน่วยงานเดิม
+      DB.allProjects=data.projects;
       if(isAdmin()){
         DB.projects=data.projects;
       } else {
@@ -1239,7 +1295,9 @@ async function pullFromSheets(silent=false){
     if(Array.isArray(data.strategies))DB.strategies=data.strategies;
     if(Array.isArray(data.indicators))DB.indicators=data.indicators;
     if(Array.isArray(data.alertEmails))DB.alertEmails=data.alertEmails;
+    if(Array.isArray(data.alertOnStatuses)&&data.alertOnStatuses.length)DB.alertOnStatuses=data.alertOnStatuses;
     if(Array.isArray(data.users))DB.users=data.users;
+    if(data.progressWindows)DB.progressWindows=data.progressWindows;
     DB.lastUpdated=Date.now();saveLocalCache();
     setConnStatus('ok','✅ ซิงก์แล้ว '+thaiTime(Date.now()));
     renderDashboard();renderProjectTable();checkAlertDot();
@@ -1491,13 +1549,22 @@ function initCurrentQuarter(){
 // ═══════════════════════════════════════════════════
 // DASHBOARD
 // ═══════════════════════════════════════════════════
+function populatePlanFilterDropdown(selId){
+  const sel=document.getElementById(selId);
+  if(!sel||sel.options.length>1)return;
+  (DB.plans||[]).forEach(pl=>{const o=document.createElement('option');o.value=pl;o.textContent=pl.replace('แผนปฏิบัติการ ','').substring(0,50);sel.appendChild(o);});
+}
 function renderDashboard(){
   populateOrgFilterDropdown('dashOrgFilter');
+  populatePlanFilterDropdown('dashPlanFilter');
   const yearF=document.getElementById('dashYearFilter').value;const qF=document.getElementById('dashQFilter').value;
   const orgF=document.getElementById('dashOrgFilter')?.value||'';
+  const planF=document.getElementById('dashPlanFilter')?.value||'';
   let projects=DB.projects;if(yearF)projects=projects.filter(p=>String(p.planYear||p.startYear)===String(yearF));
   // ★ filter หน่วยงาน
   if(orgF)projects=projects.filter(p=>{const ow=(p.owners&&p.owners.length>0)?p.owners:String(p.owner||'').split(/[|\/]/).map(s=>s.trim());return ow.includes(orgF);});
+  // ★ ข้อ 1.1: filter แผนปฏิบัติการ
+  if(planF)projects=projects.filter(p=>p.plan===planF);
   const total=projects.length;let ontrack=0,below=0,late=0,crisis=0,unreported=0,totalProgress=0;
   // ★ FIX: ใช้ getStatusFiltered/getProgressFiltered เดียวกับหน้าอื่นทั้งหมด เพื่อให้สถานะตรงกัน
   projects.forEach(p=>{const s=getStatusFiltered(p.id,yearF,qF);const prog=getProgressFiltered(p.id,yearF,qF);totalProgress+=prog;if(s==='ตามแผน')ontrack++;else if(s==='ต่ำกว่าแผน')below++;else if(s==='ล่าช้า')late++;else if(s==='วิกฤติ')crisis++;else unreported++;});
@@ -1529,6 +1596,11 @@ function renderDashboard(){
   const planColors=['#2d7a61','#2980b9','#c8892a','#8e44ad'];
   const planProgress=DB.plans.map(plan=>{const ps=DB.projects.filter(p=>p.plan===plan);if(!ps.length)return 0;return Math.round(ps.reduce((acc,p)=>acc+getProgressFiltered(p.id,yearF,qF),0)/ps.length);});
   chartStrategy=new Chart(planCtx,{type:'bar',data:{labels:planLabels,datasets:[{label:'ความคืบหน้าเฉลี่ย (%)',data:planProgress,backgroundColor:planColors.slice(0,DB.plans.length),borderRadius:8,borderSkipped:false}]},options:{responsive:true,maintainAspectRatio:false,scales:{y:{beginAtZero:true,max:100,ticks:{callback:v=>v+'%'}}},plugins:{legend:{display:false}}}});
+  // ★ ข้อ 1.2: กราฟจำนวนโครงการแยกตามแผนปฏิบัติการ (นับจำนวนโครงการ ไม่ใช่ % ความคืบหน้า)
+  const planCountCtx=document.getElementById('chartPlanCount').getContext('2d');
+  if(chartPlanCount)chartPlanCount.destroy();
+  const planCounts=DB.plans.map(plan=>projects.filter(p=>p.plan===plan).length);
+  chartPlanCount=new Chart(planCountCtx,{type:'bar',data:{labels:planLabels,datasets:[{label:'จำนวนโครงการ',data:planCounts,backgroundColor:planColors.slice(0,DB.plans.length),borderRadius:8,borderSkipped:false}]},options:{indexAxis:'y',responsive:true,maintainAspectRatio:false,scales:{x:{beginAtZero:true,ticks:{stepSize:1,precision:0}}},plugins:{legend:{display:false},tooltip:{callbacks:{label:ctx=>ctx.parsed.x+' โครงการ'}}}}});
   const sorted=[...projects].sort((a,b)=>getProgressFiltered(b.id,yearF,qF)-getProgressFiltered(a.id,yearF,qF)).slice(0,8);
   document.getElementById('dashProjectList').innerHTML=sorted.length?sorted.map(p=>{const prog=getProgressFiltered(p.id,yearF,qF);const s=getStatusFiltered(p.id,yearF,qF);return `<div style="margin-bottom:12px;cursor:pointer;" onclick="viewProject('${p.id}')"><div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;"><span style="font-size:13px;font-weight:500;">${p.name}</span><div style="display:flex;gap:8px;align-items:center;"><span class="badge badge-${statusColor(s)}">${s}</span><span style="font-size:13px;font-weight:700;min-width:36px;text-align:right;">${prog}%</span></div></div><div class="progress-wrap"><div class="progress-bar ${progressBarClass(prog)}" style="width:${prog}%"></div></div></div>`;}).join(''):'<div class="empty-state"><div class="empty-state-icon">📋</div><p>ยังไม่มีโครงการ</p></div>';
 }
@@ -1588,6 +1660,31 @@ function renderProjectTable(){
       <td class="no-print" style="white-space:nowrap;">${manageBtns}</td>
     </tr>`;
   }).join(''):`<tr><td colspan="8"><div class="empty-state"><div class="empty-state-icon">🔍</div><h3>ไม่พบโครงการ</h3></div></td></tr>`;
+
+  // ★ ข้อ 2: ส่วนล่าง — โครงการอื่นๆ ในระบบ (หน่วยงานอื่นรับผิดชอบ) แสดงเฉพาะข้อมูลพื้นฐาน
+  const otherTbody=document.getElementById('otherProjectTableBody');
+  const otherCountEl=document.getElementById('otherProjCount');
+  if(otherTbody){
+    const mineIds=new Set(DB.projects.map(p=>p.id));
+    let others=(DB.allProjects&&DB.allProjects.length?DB.allProjects:DB.projects).filter(p=>!mineIds.has(p.id));
+    others=others.filter(p=>{
+      const inS=!search||p.name.toLowerCase().includes(search);
+      const inP=!planF||p.plan===planF;
+      const inSt2=!stratF||(p.strategy||'')===stratF;
+      const inInd=!indF||(p.indicator||'')===indF;
+      const inY=!yearF||String(p.planYear||p.startYear||'')===String(yearF);
+      const inOrg=projectHasOrg(p,orgF);
+      return inS&&inP&&inSt2&&inInd&&inY&&inOrg;
+    });
+    if(otherCountEl)otherCountEl.textContent=others.length?`(${others.length} โครงการ)`:'';
+    otherTbody.innerHTML=others.length?others.map((p,idx)=>`<tr>
+      <td class="text-center" style="font-weight:600;color:var(--text-muted);">${idx+1}</td>
+      <td style="max-width:260px;"><strong>${p.name}</strong></td>
+      <td style="font-size:13px;">${p.plan?p.plan.replace('แผนปฏิบัติการ ',''):'—'}</td>
+      <td style="font-size:13px;">${p.strategy||'—'}</td>
+      <td style="font-size:13px;">${p.indicator||'—'}</td>
+    </tr>`).join(''):`<tr><td colspan="5"><div class="empty-state"><div class="empty-state-icon">📁</div><p style="font-size:13px;">ไม่มีโครงการอื่นในระบบ</p></div></td></tr>`;
+  }
 }
 
 // ═══════════════════════════════════════════════════
@@ -1750,6 +1847,7 @@ function refreshUpdateForm(){
   if(sf)(DB.strategies||[]).forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v.substring(0,55);sf.appendChild(o);});
   const inf=document.getElementById('updFilterIndicator');
   if(inf)DB.indicators.forEach(v=>{const o=document.createElement('option');o.value=v;o.textContent=v;inf.appendChild(o);});
+  if(isAdmin())renderProgressWindowsAdminPanel();
   renderProjectPicker();
 }
 
@@ -1876,6 +1974,57 @@ function selectProject(id){pickProject(id);}
 
 function loadProjectForUpdate(){renderProjectPicker();}
 
+// ═══════════════════════════════════════════════════
+// ★ ข้อ 3.1: ควบคุมช่วงเวลาเปิด/ปิดการกรอกความคืบหน้ารายไตรมาส (Admin)
+// ═══════════════════════════════════════════════════
+function defaultProgressWindows(){
+  return {Q1:{enabled:true,start:'',end:''},Q2:{enabled:true,start:'',end:''},Q3:{enabled:true,start:'',end:''},Q4:{enabled:true,start:'',end:''}};
+}
+function getProgressWindows(){return DB.progressWindows||defaultProgressWindows();}
+function isWindowOpenClient(q){
+  const w=getProgressWindows()['Q'+q];
+  if(!w)return true;
+  if(!w.enabled)return false;
+  if(!w.start&&!w.end)return true;
+  const today=new Date().toISOString().slice(0,10);
+  if(w.start&&today<w.start)return false;
+  if(w.end&&today>w.end)return false;
+  return true;
+}
+function renderProgressWindowsAdminPanel(){
+  const wrap=document.getElementById('progressWindowRows');if(!wrap)return;
+  const win=getProgressWindows();
+  const qNames=['','ไตรมาส 1 (ต.ค.–ธ.ค.)','ไตรมาส 2 (ม.ค.–มี.ค.)','ไตรมาส 3 (เม.ย.–มิ.ย.)','ไตรมาส 4 (ก.ค.–ก.ย.)'];
+  wrap.innerHTML=[1,2,3,4].map(q=>{
+    const w=win['Q'+q]||{enabled:true,start:'',end:''};
+    return `<div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;">
+      <label style="display:flex;align-items:center;gap:6px;font-size:13px;font-weight:600;min-width:190px;">
+        <input type="checkbox" id="pw_enabled_${q}" ${w.enabled?'checked':''} style="width:16px;height:16px;"> ${qNames[q]}
+      </label>
+      <label style="font-size:12px;color:var(--text-muted);">ตั้งแต่<input type="date" id="pw_start_${q}" class="form-control" style="width:auto;font-size:12px;margin-left:4px;" value="${w.start||''}"></label>
+      <label style="font-size:12px;color:var(--text-muted);">ถึง<input type="date" id="pw_end_${q}" class="form-control" style="width:auto;font-size:12px;margin-left:4px;" value="${w.end||''}"></label>
+      <span style="font-size:11px;color:var(--text-muted);">(เว้นว่างวันที่ = เปิดไม่จำกัดช่วงเวลา ตราบใดที่เปิดใช้งานไว้)</span>
+    </div>`;
+  }).join('');
+}
+async function saveProgressWindowsSettings(){
+  const windows={};
+  [1,2,3,4].forEach(q=>{
+    windows['Q'+q]={
+      enabled:document.getElementById('pw_enabled_'+q)?.checked!==false,
+      start:document.getElementById('pw_start_'+q)?.value||'',
+      end:document.getElementById('pw_end_'+q)?.value||''
+    };
+  });
+  DB.progressWindows=windows;saveLocalCache();
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveProgressWindows',data:{windows}})});
+    const json=await res.json();
+    if(json.ok){showToast('บันทึกช่วงเวลาการกรอกความคืบหน้าแล้ว ✅');renderProjectPicker();if(document.getElementById('updStep2').style.display!=='none'){const id=document.getElementById('updProjectId').value;const p=getProject(id);if(p)renderQuarterCards(p,document.getElementById('updYear').value);}}
+    else showToast('บันทึกล้มเหลว: '+(json.error||''),'red');
+  }catch(e){showToast('ไม่สามารถเชื่อมต่อได้: '+e.message,'red');}
+}
+
 function renderQuarterCards(p,year){
   const qNames=['','ไตรมาส 1','ไตรมาส 2','ไตรมาส 3','ไตรมาส 4'];
   const qRange=['','ต.ค.–ธ.ค.','ม.ค.–มี.ค.','เม.ย.–มิ.ย.','ก.ค.–ก.ย.'];
@@ -1886,8 +2035,10 @@ function renderQuarterCards(p,year){
     const target=getQuarterTarget(p,parseInt(year),q);
     const existing=DB.updates.filter(u=>u.projectId===p.id&&String(u.quarter)===String(q)&&String(u.year)===String(year)).sort((a,b)=>b.timestamp-a.timestamp)[0];
     const hasExisting=!!existing;
-    // ★ ข้อ 1: ไตรมาสที่มีข้อมูลแล้ว — ผู้ใช้ทั่วไปแก้ไขไม่ได้ แต่ Admin แก้ไขได้เสมอ
-    const isLockedForUser=hasExisting&&!userIsAdmin;
+    // ★ ข้อ 3.1: ไตรมาสที่แอดมินปิดไว้ (หรือหมดช่วงเวลาที่กำหนด) จะกรอก/แก้ไขไม่ได้ ไม่ว่าจะเป็นแอดมินหรือผู้ใช้ทั่วไป
+    const windowClosed=!isWindowOpenClient(q);
+    // ★ ข้อ 1: ไตรมาสที่มีข้อมูลแล้ว — ผู้ใช้ทั่วไปแก้ไขไม่ได้ แต่ Admin แก้ไขได้เสมอ (เว้นแต่ช่วงเวลาปิดอยู่)
+    const isLockedForUser=windowClosed||(hasExisting&&!userIsAdmin);
     const exStatus=hasExisting?existing.status:'';
     const exProg=hasExisting?existing.progress:0;
     const exRatio=hasExisting?computeRatio(p,existing.progress,year,q):null;
@@ -1897,7 +2048,7 @@ function renderQuarterCards(p,year){
       <div style="background:#fff;border:1.5px solid var(--border);border-radius:10px;padding:10px 12px;margin-bottom:10px;">
         <div style="font-size:11px;color:var(--text-muted);margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;">
           <span>📋 ผลที่กรอกล่าสุด — ${thaiDate(existing.timestamp)}</span>
-          ${isLockedForUser?'<span style="background:#f3f4f6;color:#6b7280;border-radius:10px;padding:2px 8px;font-weight:600;">🔒 แก้ไขไม่ได้</span>':(hasExisting&&userIsAdmin?'<span style="background:#fff3e0;color:#e65100;border-radius:10px;padding:2px 8px;font-weight:600;">👑 Admin แก้ไขได้</span>':'')}
+          ${windowClosed?'<span style="background:#f3f4f6;color:#6b7280;border-radius:10px;padding:2px 8px;font-weight:600;">🔒 ปิดรับกรอกอยู่</span>':(isLockedForUser?'<span style="background:#f3f4f6;color:#6b7280;border-radius:10px;padding:2px 8px;font-weight:600;">🔒 แก้ไขไม่ได้</span>':(hasExisting&&userIsAdmin?'<span style="background:#fff3e0;color:#e65100;border-radius:10px;padding:2px 8px;font-weight:600;">👑 Admin แก้ไขได้</span>':''))}
         </div>
         <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
           <div>
@@ -1915,7 +2066,8 @@ function renderQuarterCards(p,year){
         ${existing.activity?`<div style="margin-top:8px;font-size:12px;color:var(--text-muted);border-top:1px solid var(--border);padding-top:8px;"><strong>ผลดำเนินงาน:</strong> ${existing.activity.substring(0,120)}${existing.activity.length>120?'…':''}</div>`:''}
       </div>`:'';
     const cardLockedClass=isLockedForUser?' q-card-readonly':'';
-    const clickHandler=isLockedForUser?`onclick="showToast('🔒 ไตรมาสนี้กรอกข้อมูลแล้ว ไม่สามารถแก้ไขได้ (ติดต่อผู้ดูแลระบบหากต้องการแก้ไข)','red')"`:`onclick="selectQCard(${q})"`;
+    const lockMsg=windowClosed?'🔒 ไตรมาสนี้ปิดรับการกรอก/แก้ไขข้อมูลอยู่ในขณะนี้ (ผู้ดูแลระบบเป็นผู้กำหนดช่วงเวลา)':'🔒 ไตรมาสนี้กรอกข้อมูลแล้ว ไม่สามารถแก้ไขได้ (ติดต่อผู้ดูแลระบบหากต้องการแก้ไข)';
+    const clickHandler=isLockedForUser?`onclick="showToast('${lockMsg}','red')"`:`onclick="selectQCard(${q})"`;
     return `<div class="q-card${cardLockedClass}" id="qcard_${q}" data-locked="${isLockedForUser}" ${clickHandler}>
       <div class="q-card-header">
         <div><div class="q-card-title">${qNames[q]}</div><div class="q-card-sub">${qRange[q]}</div></div>
@@ -1925,7 +2077,7 @@ function renderQuarterCards(p,year){
         <div class="q-target-chip">🎯 เป้าหมายไตรมาสนี้: ${target}%</div>
         ${existingSummary}
         ${isLockedForUser
-          ?`<div class="q-placeholder" style="padding:10px 0;font-size:13px;color:var(--text-muted);text-align:center;">🔒 ไตรมาสนี้กรอกข้อมูลแล้ว — แก้ไขไม่ได้</div>`
+          ?`<div class="q-placeholder" style="padding:10px 0;font-size:13px;color:var(--text-muted);text-align:center;">${windowClosed?'🔒 ปิดรับการกรอกอยู่ในขณะนี้':'🔒 ไตรมาสนี้กรอกข้อมูลแล้ว — แก้ไขไม่ได้'}</div>`
           :`<div class="q-placeholder" style="padding:6px 0;font-size:13px;color:var(--text-muted);">👆 คลิกเพื่อ${hasExisting?'แก้ไข (Admin)':'เปิดฟอร์มกรอก'}</div>`
         }
         <div class="q-lock-msg">🔒 ปิดอยู่</div>
@@ -2055,6 +2207,11 @@ async function submitUpdate(){
   if(!reporter){showToast('กรุณาระบุชื่อผู้รายงาน','red');return;}
   if(!selectedQuarter){showToast('กรุณาเลือกไตรมาสที่ต้องการรายงาน','red');return;}
   const q=selectedQuarter;
+  // ★ ข้อ 3.1: ตรวจสอบว่าไตรมาสนี้เปิดให้กรอก/แก้ไขอยู่หรือไม่ (Admin เป็นผู้กำหนดช่วงเวลา)
+  if(!isWindowOpenClient(q)){
+    showToast('🔒 ไตรมาสนี้ปิดรับการกรอก/แก้ไขข้อมูลอยู่ในขณะนี้ (ผู้ดูแลระบบเป็นผู้กำหนดช่วงเวลา)','red');
+    return;
+  }
   // ★ ข้อ 1: ป้องกันการบันทึกซ้อนไตรมาสที่มีข้อมูลแล้ว ถ้าไม่ใช่ Admin (double-check ก่อน submit จริง)
   const _existingQ=DB.updates.filter(u=>u.projectId===projectId&&String(u.quarter)===String(q)&&String(u.year)===String(year));
   if(_existingQ.length>0&&!isAdmin()){
@@ -2067,6 +2224,20 @@ async function submitUpdate(){
   const _numEl=document.getElementById('upd_prog_num_'+q);
   const _sliderEl=document.getElementById('upd_prog_'+q);
   const progress=_numEl?Number(_numEl.value):(_sliderEl?Number(_sliderEl.value):0);
+  // ★ ข้อ 3.2: ผลสะสมความก้าวหน้าทุกไตรมาส (รวมไตรมาสนี้) ของปีเดียวกัน ต้องไม่เกิน 100%
+  {
+    const byQ={};
+    DB.updates.filter(u=>u.projectId===projectId&&String(u.year)===String(year)).forEach(u=>{
+      const uq=Number(u.quarter);
+      if(!byQ[uq]||u.timestamp>byQ[uq]._ts)byQ[uq]={progress:Number(u.progress)||0,_ts:u.timestamp};
+    });
+    byQ[q]={progress,_ts:Date.now()};
+    const cumulative=Object.values(byQ).reduce((s,v)=>s+v.progress,0);
+    if(cumulative-100>0.5){
+      showToast(`❌ ผลสะสมความก้าวหน้าทุกไตรมาสรวมกันต้องไม่เกิน 100% (ขณะนี้รวม ${cumulative}%)`,'red');
+      return;
+    }
+  }
   const problems=(document.getElementById('upd_problems_'+q)?.value||'').trim();
   const solution=(document.getElementById('upd_solution_'+q)?.value||'').trim();
   const project=getProject(projectId);
@@ -2080,7 +2251,7 @@ async function submitUpdate(){
   try{
     await pushUpdateToSheets(update,project);syncOk=true;
     setSyncBadge('ok','✅ Synced to Google Sheets');
-    if(status==='วิกฤติ'||status==='ล่าช้า')showToast(`บันทึกสำเร็จ — สถานะ "${status}" ส่งอีเมลแจ้งเตือนแล้ว ✅`);
+    if(status==='วิกฤติ'||status==='ล่าช้า'||status==='ต่ำกว่าแผน')showToast(`บันทึกสำเร็จ — สถานะ "${status}" ส่งอีเมลแจ้งเตือนแล้ว ✅`);
     else showToast('บันทึกสำเร็จและ sync ไปยัง Google Sheets ✅');
   }catch(e){
     setSyncBadge('err','❌ Sheets sync ล้มเหลว');
@@ -2155,6 +2326,7 @@ function printProjectDetail(){
 // ═══════════════════════════════════════════════════
 function renderAlerts(){
   renderExtraAlertEmails();
+  renderAlertStatusChecks();
   const latest={};DB.updates.forEach(u=>{if(!latest[u.projectId]||u.timestamp>latest[u.projectId].timestamp)latest[u.projectId]=u;});
   const cList=[],lList=[],escList=[];
   Object.values(latest).forEach(u=>{const p=getProject(u.projectId);if(!p)return;const s=computeStatus(p,u.progress,u.year,u.quarter);if(s==='วิกฤติ'){cList.push(u);if(criticalStreak(p)>=2)escList.push(u);}else if(s==='ล่าช้า')lList.push(u);});
@@ -2166,6 +2338,26 @@ function renderAlerts(){
   document.getElementById('alertsContent').innerHTML=html;
 }
 function alertCard(u,type){const p=getProject(u.projectId);const s=p?computeStatus(p,u.progress,u.year,u.quarter):u.status;return `<div class="card" style="margin-bottom:12px;border-left:4px solid var(--${type});"><div class="card-body" style="padding:14px 16px;"><div style="display:flex;justify-content:space-between;margin-bottom:6px;"><strong>${p?.name||'—'}</strong><span class="badge badge-${type==='danger'?'danger':'warning'}">${s}</span></div><div style="font-size:13px;color:var(--text-muted);">ปีงบ ${u.year} Q${u.quarter} · ${u.reporter} · ${thaiDate(u.timestamp)} · ความคืบหน้า ${u.progress}%</div>${u.problems?`<div style="margin-top:6px;font-size:13px;"><strong>ปัญหา:</strong> ${u.problems}</div>`:''}<div style="margin-top:8px;"><button class="btn btn-sm btn-outline" onclick="viewProject('${u.projectId}')">🔍 ดูรายละเอียด</button></div></div></div>`;}
+function renderAlertStatusChecks(){
+  const wrap=document.getElementById('alertStatusChecks');if(!wrap)return;
+  const all=['ต่ำกว่าแผน','ล่าช้า','วิกฤติ'];
+  const current=DB.alertOnStatuses&&DB.alertOnStatuses.length?DB.alertOnStatuses:['ต่ำกว่าแผน','ล่าช้า','วิกฤติ'];
+  wrap.innerHTML=all.map(s=>`<label style="display:flex;align-items:center;gap:6px;font-size:14px;font-weight:600;cursor:pointer;">
+    <input type="checkbox" value="${s}" ${current.includes(s)?'checked':''} style="width:16px;height:16px;"> <span class="badge badge-${statusColor(s)}">${s}</span>
+  </label>`).join('');
+}
+async function saveAlertStatusSettings(){
+  const checks=document.querySelectorAll('#alertStatusChecks input[type=checkbox]:checked');
+  const alertOnStatuses=Array.from(checks).map(c=>c.value);
+  if(!alertOnStatuses.length){showToast('กรุณาเลือกอย่างน้อย 1 สถานะ','red');return;}
+  DB.alertOnStatuses=alertOnStatuses;saveLocalCache();
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveAlertSettings',data:{alertOnStatuses}})});
+    const json=await res.json();
+    if(json.ok)showToast('บันทึกสถานะที่ต้องการแจ้งเตือนแล้ว ✅');else showToast('บันทึกล้มเหลว: '+(json.error||''),'red');
+  }catch(e){showToast('ไม่สามารถเชื่อมต่อได้: '+e.message,'red');}
+}
+
 function renderExtraAlertEmails(){const wrap=document.getElementById('extraAlertEmailList');if(!wrap)return;const emails=DB.alertEmails||[];wrap.innerHTML=emails.length?emails.map((e,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:6px;"><div style="flex:1;padding:7px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:13px;">📧 ${e}</div><button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:1px solid #fac5c0;" onclick="removeAlertEmail(${i})">✕</button></div>`).join(''):'<p style="font-size:13px;color:var(--text-muted);">ยังไม่มีอีเมลเพิ่มเติม</p>';}
 async function addAlertEmail(){const input=document.getElementById('newAlertEmail');const email=input.value.trim();if(!email||!email.includes('@')){showToast('กรุณากรอกอีเมลให้ถูกต้อง');return;}if(!DB.alertEmails)DB.alertEmails=[];if(DB.alertEmails.includes(email)){showToast('อีเมลนี้มีอยู่แล้ว');return;}DB.alertEmails.push(email);saveLocalCache();renderExtraAlertEmails();input.value='';try{await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveAlertEmails',data:{emails:DB.alertEmails}})});showToast('เพิ่มอีเมลแล้ว ✅');}catch(e){showToast('บันทึกในเครื่องแล้ว แต่ sync ล้มเหลว','red');}}
 async function removeAlertEmail(i){if(!confirm('ลบอีเมลนี้?'))return;DB.alertEmails.splice(i,1);saveLocalCache();renderExtraAlertEmails();try{await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveAlertEmails',data:{emails:DB.alertEmails}})});}catch(e){}showToast('ลบอีเมลแล้ว');}
@@ -2250,7 +2442,7 @@ async function deleteUser(id){if(!confirm('ลบบัญชีนี้?'))ret
 // ═══════════════════════════════════════════════════
 function exportData(){const blob=new Blob([JSON.stringify(DB,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=`fossil-backup-${new Date().toISOString().slice(0,10)}.json`;a.click();showToast('สำรองข้อมูลแล้ว 📥');}
 function importDataTrigger(){document.getElementById('importFile').click();}
-function importData(e){const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(!data.projects)throw new Error('Invalid');if(!confirm(`นำเข้าจาก "${f.name}"?\nข้อมูลปัจจุบันจะถูกแทนที่`))return;DB=data;if(!DB.plans)DB.plans=[];if(!DB.strategies)DB.strategies=[];if(!DB.indicators)DB.indicators=[];if(!DB.alertEmails)DB.alertEmails=[];if(!DB.users)DB.users=[];saveLocalCache();renderDashboard();renderProjectTable();showToast('นำเข้าสำเร็จ ✅');}catch{alert('ไฟล์ไม่ถูกต้อง');}};reader.readAsText(f);e.target.value='';}
+function importData(e){const f=e.target.files[0];if(!f)return;const reader=new FileReader();reader.onload=ev=>{try{const data=JSON.parse(ev.target.result);if(!data.projects)throw new Error('Invalid');if(!confirm(`นำเข้าจาก "${f.name}"?\nข้อมูลปัจจุบันจะถูกแทนที่`))return;DB=data;if(!DB.plans)DB.plans=[];if(!DB.strategies)DB.strategies=[];if(!DB.indicators)DB.indicators=[];if(!DB.alertEmails)DB.alertEmails=[];if(!DB.users)DB.users=[];if(!DB.allProjects)DB.allProjects=DB.projects||[];if(!DB.alertOnStatuses)DB.alertOnStatuses=['ต่ำกว่าแผน','ล่าช้า','วิกฤติ'];saveLocalCache();renderDashboard();renderProjectTable();showToast('นำเข้าสำเร็จ ✅');}catch{alert('ไฟล์ไม่ถูกต้อง');}};reader.readAsText(f);e.target.value='';}
 function clearAllData(){if(!confirm('⚠️ ล้างข้อมูลทั้งหมด?'))return;DB.projects=[];DB.updates=[];DB.lastUpdated=null;saveLocalCache();renderDashboard();renderProjectTable();showToast('ล้างข้อมูลแล้ว');}
 function printDashboard(){window.print();}
 
