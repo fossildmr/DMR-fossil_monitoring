@@ -661,9 +661,11 @@ select.form-control{cursor:pointer}
         </div>
         <div class="form-group">
           <label class="form-label required">หน่วยงานรับผิดชอบ</label>
-          <select class="form-control" id="projOwnerSelect" multiple size="4" style="height:auto;"></select>
-          <p style="font-size:12px;color:var(--text-muted);margin-top:4px;">กด Ctrl (Mac: Cmd) เพื่อเลือกหลายหน่วยงาน</p>
+          <div id="projOwnerCheckboxes" style="border:1.5px solid var(--border);border-radius:8px;padding:10px 12px;background:#fafafa;max-height:180px;overflow-y:auto;display:flex;flex-direction:column;gap:6px;">
+            <p style="font-size:12px;color:var(--text-muted);margin:0;">กำลังโหลดรายชื่อหน่วยงาน...</p>
+          </div>
           <input type="hidden" id="projOwner">
+          <input type="hidden" id="projOwnerSelect">
         </div>
       </div>
       <div class="form-row">
@@ -788,6 +790,7 @@ select.form-control{cursor:pointer}
       <div style="display:flex;align-items:center;gap:8px;">
         <label style="font-size:13px;font-weight:600;color:var(--text);white-space:nowrap;">ปีงบประมาณ</label>
         <select class="form-control" id="updYear" onchange="renderProjectPicker()" style="width:110px;">
+          <option value="">ทุกปี</option>
           <option selected>2569</option><option>2570</option>
         </select>
       </div>
@@ -1123,13 +1126,26 @@ async function doLogin(){
     let result=await response.json();
     if(!result.ok){document.getElementById('loginErr').style.display='block';return;}
     CURRENT_USER=result.user;
-    localStorage.setItem('fossilSession',JSON.stringify(result.user));
+    localStorage.setItem('fossilSession',JSON.stringify({...result.user,loginAt:Date.now()})); // ★ A3 fix: บันทึกเวลา login
     document.getElementById('loginScreen').style.display='none';
     applyRoleUI();bootApp();
   }catch(e){document.getElementById('loginErr').style.display='block';}
 }
 function doLogout(){if(!confirm('ต้องการออกจากระบบ?'))return;localStorage.removeItem('fossilSession');CURRENT_USER=null;location.reload();}
-function checkSession(){const raw=localStorage.getItem('fossilSession');if(!raw)return false;CURRENT_USER=JSON.parse(raw);return true;}
+function checkSession(){
+  const raw=localStorage.getItem('fossilSession');
+  if(!raw)return false;
+  try{
+    const data=JSON.parse(raw);
+    // ★ A3 fix: ตรวจอายุ session — หมดอายุหลัง 24 ชั่วโมง
+    const SESSION_TTL = 24*60*60*1000; // 24h in ms
+    if(data.loginAt && (Date.now()-data.loginAt)>SESSION_TTL){
+      localStorage.removeItem('fossilSession');
+      return false; // session หมดอายุ
+    }
+    CURRENT_USER=data;return true;
+  }catch(e){localStorage.removeItem('fossilSession');return false;}
+}
 function isAdmin(){return CURRENT_USER&&CURRENT_USER.role==='admin';}
 function applyRoleUI(){
   if(!CURRENT_USER)return;
@@ -1258,7 +1274,27 @@ let pendingFiles={};// keyed by quarter: {1:[], 2:[], 3:[], 4:[]}
 let selectedQuarter=null;
 let chartStatus,chartStrategy,chartDetail,chartPlanCount;
 
-function saveLocalCache(){const t=JSON.parse(JSON.stringify(DB));t.updates=t.updates.map(u=>({...u,files:(u.files||[]).map(f=>({name:f.name,size:f.size,type:f.type,driveLink:f.driveLink||''}))}));localStorage.setItem('fossilPlanDB',JSON.stringify(t));}
+function saveLocalCache(){
+  try{
+    const t=JSON.parse(JSON.stringify(DB));
+    t.updates=t.updates.map(u=>({...u,files:(u.files||[]).map(f=>({name:f.name,size:f.size,type:f.type,driveLink:f.driveLink||''}))}));
+    localStorage.setItem('fossilPlanDB',JSON.stringify(t));
+  }catch(e){
+    // ★ B5 fix: ตรวจจับ QuotaExceededError เมื่อ localStorage เต็ม
+    if(e.name==='QuotaExceededError'||e.code===22){
+      console.warn('localStorage เต็ม — พยายามลดขนาดข้อมูลแคช');
+      try{
+        // ลดขนาดโดยเก็บแค่ update 1 ปีล่าสุด
+        const t2=JSON.parse(JSON.stringify(DB));
+        const currentYear=new Date().getFullYear()+543;
+        t2.updates=t2.updates.filter(u=>Number(u.year)>=(currentYear-1));
+        t2.updates=t2.updates.map(u=>({...u,files:[]})); // ไม่แคช file metadata
+        localStorage.setItem('fossilPlanDB',JSON.stringify(t2));
+        showToast('⚠️ พื้นที่แคชเกือบเต็ม ข้อมูลเก่าจะไม่ถูกแคชไว้ในเครื่อง','red');
+      }catch(e2){ console.error('localStorage เต็มทั้งหมด ไม่สามารถแคชได้',e2); }
+    }
+  }
+}
 function loadLocalCache(){const raw=localStorage.getItem('fossilPlanDB');if(!raw)return false;try{const d=JSON.parse(raw);DB=d;if(!DB.plans)DB.plans=[];if(!DB.strategies)DB.strategies=[];if(!DB.indicators)DB.indicators=[];if(!DB.alertEmails)DB.alertEmails=[];if(!DB.alertOnStatuses||!DB.alertOnStatuses.length)DB.alertOnStatuses=['ต่ำกว่าแผน','ล่าช้า','วิกฤติ'];if(!DB.users)DB.users=[];if(!DB.allProjects)DB.allProjects=DB.projects||[];if(!DB.progressWindows)DB.progressWindows=null;return true;}catch{return false;}}
 
 // ═══════════════════════════════════════════════════
@@ -1392,6 +1428,25 @@ function showPage(id,el){
 // ═══════════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════════
+// ★ A4 fix: escapeHtml — ป้องกัน XSS ก่อนนำค่าผู้ใช้ไป render ผ่าน innerHTML
+
+// ★ A6 fix: sanitizeSheetValue — ป้องกัน Formula Injection ก่อนเขียนลง Google Sheets
+// ค่าที่ขึ้นต้นด้วย = + - @ จะถูกเติม ' นำหน้าเพื่อให้ Sheets อ่านเป็นข้อความธรรมดา
+function sanitizeSheetValue(val){
+  if(val==null)return val;
+  const s=String(val);
+  if(/^[=+\-@]/.test(s))return "'"+s;
+  return s;
+}
+function escapeHtml(str){
+  if(str==null||str===undefined)return '';
+  return String(str)
+    .replace(/&/g,'&amp;')
+    .replace(/</g,'&lt;')
+    .replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;')
+    .replace(/'/g,'&#x27;');
+}
 function uid(){return Date.now().toString(36)+Math.random().toString(36).substr(2,5);}
 function fmt(n){return n?parseInt(n).toLocaleString('th-TH'):'0';}
 function getProject(id){return DB.projects.find(p=>p.id===id);}
@@ -1757,17 +1812,30 @@ function renderQuarterlySummary(){
 // ═══════════════════════════════════════════════════
 // ADD PROJECT PAGE
 // ═══════════════════════════════════════════════════
+function updateProjOwnerValue(){
+  const boxes=document.querySelectorAll('#projOwnerCheckboxes input[type="checkbox"]:checked');
+  const vals=[...boxes].map(cb=>cb.value);
+  document.getElementById('projOwner').value=vals.join('|');
+}
 function initAddProjectForm(){
   if(!isAdmin()){showToast('เฉพาะผู้ดูแลระบบ');return;}
   refreshSelectOpts('projPlan',DB.plans,'— เลือกแผนปฏิบัติการ —');
   refreshSelectOpts('projStrategy',DB.strategies||[],'— เลือกแนวทางการพัฒนา —');
   refreshSelectOpts('projIndicator',DB.indicators,'— เลือกเป้าหมาย/ตัวชี้วัด —');
-  const _owSel=document.getElementById('projOwnerSelect');
-  if(_owSel){
-    const _prev=[..._owSel.selectedOptions].map(o=>o.value);
-    _owSel.innerHTML='';
-    (DB.orgs||[]).forEach(org=>{const opt=document.createElement('option');opt.value=org;opt.textContent=org;if(_prev.includes(org))opt.selected=true;_owSel.appendChild(opt);});
-    _owSel.onchange=()=>{const sel=[..._owSel.selectedOptions].map(o=>o.value);document.getElementById('projOwner').value=sel.join('|');};
+  // ★ ข้อ 1: Populate checkbox list จาก DB.orgs
+  const _owBox=document.getElementById('projOwnerCheckboxes');
+  if(_owBox){
+    const _prevOwners=(document.getElementById('projOwner').value||'').split('|').map(s=>s.trim()).filter(Boolean);
+    const _orgs=DB.orgs||[];
+    if(_orgs.length===0){
+      _owBox.innerHTML='<p style="font-size:12px;color:var(--text-muted);margin:0;">ยังไม่มีรายชื่อหน่วยงาน — เพิ่มได้ที่เมนู ตั้งค่า</p>';
+    } else {
+      _owBox.innerHTML=_orgs.map((org,i)=>`
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:13px;padding:2px 4px;border-radius:4px;transition:background .15s;" onmouseover="this.style.background='#f0f7f4'" onmouseout="this.style.background='transparent'">
+          <input type="checkbox" value="${org}" ${_prevOwners.includes(org)?'checked':''} onchange="updateProjOwnerValue()" style="width:16px;height:16px;accent-color:var(--primary);cursor:pointer;flex-shrink:0;">
+          <span>${org}</span>
+        </label>`).join('');
+    }
   }
   validateQtSum();
 }
@@ -1803,8 +1871,8 @@ function editProjectInline(id){
     refreshSelectOpts('projIndicator',DB.indicators,'— เลือกเป้าหมาย/ตัวชี้วัด —');document.getElementById('projIndicator').value=p.indicator||'';
     const _eOwners=(p.owners&&p.owners.length>0)?p.owners:String(p.owner||'').split(/[|/\/]/).map(s=>s.trim()).filter(Boolean);
     document.getElementById('projOwner').value=_eOwners.join('|');
-    const _eOwSel=document.getElementById('projOwnerSelect');
-    if(_eOwSel){[..._eOwSel.options].forEach(opt=>{opt.selected=_eOwners.includes(opt.value);});}
+    // ★ restore checkbox states (เปลี่ยนจาก multi-select เป็น checkbox แล้ว)
+    document.querySelectorAll('#projOwnerCheckboxes input[type="checkbox"]').forEach(cb=>{cb.checked=_eOwners.includes(cb.value);});
     const qt=p.quarterTargets||{};
     document.getElementById('qt_Q1').value=qt.Q1!=null?qt.Q1:25;document.getElementById('qt_Q2').value=qt.Q2!=null?qt.Q2:25;document.getElementById('qt_Q3').value=qt.Q3!=null?qt.Q3:25;document.getElementById('qt_Q4').value=qt.Q4!=null?qt.Q4:25;
     validateQtSum();
@@ -1816,7 +1884,7 @@ async function saveProject(){
   if(!name||!owner||!plan){alert('กรุณากรอกชื่อโครงการ, หน่วยงาน และแผนปฏิบัติการ');return;}
   const qt=collectQuarterTargets();const qtSum=qt.Q1+qt.Q2+qt.Q3+qt.Q4;if(Math.abs(qtSum-100)>0.5){alert('สัดส่วนเป้าหมายทั้ง 4 ไตรมาสต้องรวมกันได้ 100% (ปัจจุบัน: '+qtSum+'%)');return;}
   const editId=document.getElementById('editProjectId').value;
-  const _owSel2=document.getElementById('projOwnerSelect');const _ownersArr=_owSel2?[..._owSel2.selectedOptions].map(o=>o.value):(owner?owner.split('|').map(s=>s.trim()).filter(Boolean):[]);const proj={id:editId||uid(),plan,strategy:document.getElementById('projStrategy').value,indicator:document.getElementById('projIndicator').value,name,kpi:document.getElementById('projKPI').value.trim(),owner:_ownersArr.join(' / '),owners:_ownersArr,planYear:document.getElementById('newProjYear').value,startMonth:parseInt(document.getElementById('projStartMonth').value),startYear:document.getElementById('projStartYear').value,endMonth:parseInt(document.getElementById('projEndMonth').value),endYear:document.getElementById('projEndYear').value,budget:parseInt(document.getElementById('projBudget').value)||0,quarterTargets:qt,createdAt:editId?(getProject(editId)?.createdAt||Date.now()):Date.now()};
+  const _checkedBoxes=document.querySelectorAll('#projOwnerCheckboxes input[type="checkbox"]:checked');const _ownersArr=_checkedBoxes.length>0?[..._checkedBoxes].map(cb=>cb.value):(owner?owner.split('|').map(s=>s.trim()).filter(Boolean):[]);const proj={id:editId||uid(),plan,strategy:document.getElementById('projStrategy').value,indicator:document.getElementById('projIndicator').value,name,kpi:document.getElementById('projKPI').value.trim(),owner:_ownersArr.join(' / '),owners:_ownersArr,planYear:document.getElementById('newProjYear').value,startMonth:parseInt(document.getElementById('projStartMonth').value),startYear:document.getElementById('projStartYear').value,endMonth:parseInt(document.getElementById('projEndMonth').value),endYear:document.getElementById('projEndYear').value,budget:parseInt(document.getElementById('projBudget').value)||0,quarterTargets:qt,createdAt:editId?(getProject(editId)?.createdAt||Date.now()):Date.now()};
   if(editId){const i=DB.projects.findIndex(p=>p.id===editId);if(i>-1)DB.projects[i]=proj;}else DB.projects.push(proj);
   saveLocalCache();renderProjectTable();renderDashboard();
   try{await pushProjectToSheets(proj,editId?'updateProject':'saveProject');showToast('บันทึกโครงการและ sync Sheets สำเร็จ ✅');}
@@ -1824,7 +1892,9 @@ async function saveProject(){
   resetAddProjectForm();showToast('บันทึกโครงการเรียบร้อย');
 }
 async function deleteProject(id){
-  if(!isAdmin())return;const p=getProject(id);if(!confirm(`ลบโครงการ "${p?.name}"?`))return;
+  if(!isAdmin())return;const p=getProject(id);
+  // ★ D3 fix: แสดงชื่อโครงการและคำเตือนว่าลบถาวร กู้คืนไม่ได้
+  if(!confirm(`⚠️ ลบโครงการถาวร (กู้คืนไม่ได้)\n\nชื่อ: "${p?.name}"\n\nข้อมูลความคืบหน้าทุกไตรมาสจะถูกลบด้วย\nกด OK เพื่อยืนยัน หรือ Cancel เพื่อยกเลิก`))return;
   DB.projects=DB.projects.filter(x=>x.id!==id);DB.updates=DB.updates.filter(u=>u.projectId!==id);
   saveLocalCache();renderProjectTable();showToast('ลบโครงการแล้ว');
   try{await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'deleteProject',data:{id}})});}catch{}
@@ -1876,6 +1946,16 @@ function resetUpdFilters(){
 
 function renderProjectPicker(){
   populateOrgFilterDropdown('updFilterOrg');
+  // ★ ข้อ 2: populate ปีจาก DB.projects จริง (dynamic) และเก็บปีที่เลือกไว้
+  const _updYearSel=document.getElementById('updYear');
+  if(_updYearSel){
+    const _curY=_updYearSel.value;
+    const _years=[...new Set(DB.projects.map(p=>String(p.planYear||p.startYear||'')).filter(Boolean))].sort();
+    _updYearSel.innerHTML='<option value="">ทุกปี</option>';
+    _years.forEach(yr=>{const o=document.createElement('option');o.value=yr;o.textContent='พ.ศ. '+yr;_updYearSel.appendChild(o);});
+    if(_curY&&_years.includes(_curY))_updYearSel.value=_curY;
+    else if(!_curY)_updYearSel.value=''; // คง "ทุกปี" ไว้
+  }
   const year=document.getElementById('updYear').value;
   const text=(document.getElementById('updSearchInput')?.value||'').toLowerCase().trim();
   const planF=document.getElementById('updFilterPlan')?.value||'';
