@@ -1003,6 +1003,80 @@ select.form-control{cursor:pointer}
     <div class="card-header"><span class="card-title">👥 จัดการบัญชีผู้ใช้</span></div>
     <div class="card-body"><div id="userList" style="margin-bottom:12px;"></div><button class="btn btn-primary" onclick="openAddUser()">+ เพิ่มบัญชีผู้ใช้</button></div>
   </div>
+
+  <!-- ★ RBAC: กำหนดสิทธิ์โครงการรายบุคคล -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">🔐 กำหนดสิทธิ์การเข้าถึงโครงการ</span></div>
+    <div class="card-body" style="padding:0;">
+      <!-- Role info bar -->
+      <div style="padding:12px 16px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+        <div style="background:#fff3e0;border-radius:8px;padding:8px 12px;font-size:12px;flex:1;min-width:140px;">
+          <strong>📋 ผู้บริหาร</strong><br><span style="color:var(--text-muted);">เห็นทุกโครงการอัตโนมัติ</span>
+        </div>
+        <div style="background:var(--primary-pale);border-radius:8px;padding:8px 12px;font-size:12px;flex:1;min-width:140px;">
+          <strong>🏛️ เจ้าหน้าที่ กคบ.</strong><br><span style="color:var(--text-muted);">เห็นทุกโครงการ — กำหนดว่าโครงการไหน <u>แก้ไข</u>ได้</span>
+        </div>
+        <div style="background:#f3f4f6;border-radius:8px;padding:8px 12px;font-size:12px;flex:1;min-width:140px;">
+          <strong>👤 เจ้าของโครงการ</strong><br><span style="color:var(--text-muted);">กำหนดว่าโครงการไหน <u>เห็น</u> และ <u>แก้ไข</u>ได้</span>
+        </div>
+      </div>
+      <!-- 2-column layout -->
+      <div style="display:flex;min-height:320px;">
+        <!-- ซ้าย: รายชื่อ user -->
+        <div style="width:240px;border-right:1px solid var(--border);flex-shrink:0;overflow-y:auto;max-height:420px;">
+          <div style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid var(--border);">เลือกผู้ใช้</div>
+          <div id="rbacUserList" style="padding:4px 0;"></div>
+        </div>
+        <!-- ขวา: โครงการ -->
+        <div style="flex:1;overflow-y:auto;max-height:420px;">
+          <div id="rbacProjectPanel">
+            <div style="padding:40px;text-align:center;color:var(--text-muted);">
+              <div style="font-size:32px;margin-bottom:8px;">👈</div>
+              <p style="font-size:13px;">เลือกผู้ใช้ทางซ้ายเพื่อกำหนดสิทธิ์โครงการ</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ★ กำหนดสิทธิ์การเข้าถึงโครงการรายบุคคล -->
+  <div class="card" style="margin-bottom:16px;">
+    <div class="card-header"><span class="card-title">🔐 กำหนดสิทธิ์การเข้าถึงโครงการ</span></div>
+    <div class="card-body" style="padding:0;">
+
+      <!-- คำอธิบาย role 3 ระดับ -->
+      <div style="padding:14px 16px 10px;display:flex;gap:8px;flex-wrap:wrap;border-bottom:1px solid var(--border);">
+        <div style="background:#fff3e0;border:1px solid #ffe0b2;border-radius:8px;padding:8px 12px;font-size:12px;flex:1;min-width:150px;">
+          <strong>👑 Admin</strong><br><span style="color:var(--text-muted);">เห็น+แก้ไขทุกโครงการ</span>
+        </div>
+        <div style="background:#e8f4f0;border:1px solid #a9dfbf;border-radius:8px;padding:8px 12px;font-size:12px;flex:1;min-width:150px;">
+          <strong>👤 User (ผู้ใช้งาน)</strong><br><span style="color:var(--text-muted);">เห็นและแก้ไขตามสิทธิ์ที่ Admin กำหนด</span>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:0;border-top:0;">
+        <!-- คอลัมน์ซ้าย: รายชื่อผู้ใช้ -->
+        <div style="width:240px;min-width:200px;border-right:1px solid var(--border);overflow-y:auto;max-height:460px;flex-shrink:0;">
+          <div style="padding:8px 12px;font-size:11px;font-weight:700;color:var(--text-muted);letter-spacing:.06em;text-transform:uppercase;background:#f9fafb;border-bottom:1px solid var(--border);position:sticky;top:0;">เลือกผู้ใช้</div>
+          <div id="accessUserListItems" style="padding:4px 0;">
+            <p style="padding:12px;font-size:12px;color:var(--text-muted);">โหลดข้อมูลก่อนโดยกด Sync</p>
+          </div>
+        </div>
+
+        <!-- คอลัมน์ขวา: รายการโครงการ -->
+        <div style="flex:1;overflow-y:auto;max-height:460px;">
+          <div id="accessProjectPanel">
+            <div style="padding:48px 24px;text-align:center;color:var(--text-muted);">
+              <div style="font-size:40px;margin-bottom:10px;">👈</div>
+              <p style="font-size:13px;">เลือกผู้ใช้ทางซ้ายเพื่อกำหนดสิทธิ์โครงการ</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
   <div class="card">
     <div class="card-header"><span class="card-title" style="color:var(--danger);">⚠️ จัดการข้อมูล</span></div>
     <div class="card-body" style="display:flex;gap:10px;flex-wrap:wrap;">
@@ -1043,7 +1117,12 @@ select.form-control{cursor:pointer}
       <div class="form-group"><label class="form-label">อีเมล</label><input type="email" class="form-control" id="uEmail"></div>
       <div class="form-group"><label class="form-label required">ชื่อผู้ใช้ (Username)</label><input type="text" class="form-control" id="uUsername"></div>
       <div class="form-group"><label class="form-label">รหัสผ่าน</label><input type="password" class="form-control" id="uPassword"><p id="uPasswordHint" style="font-size:12px;color:var(--text-muted);margin-top:4px;display:none;">เว้นว่างไว้หากไม่ต้องการเปลี่ยน</p></div>
-      <div class="form-group"><label class="form-label required">บทบาท</label><select class="form-control" id="uRole"><option value="user">👤 ผู้ใช้งานทั่วไป</option><option value="admin">👑 ผู้ดูแลระบบ</option></select></div>
+      <div class="form-group"><label class="form-label required">บทบาท</label><select class="form-control" id="uRole">
+        <option value="projectowner">👤 เจ้าของโครงการ</option>
+        <option value="officer">🏛️ เจ้าหน้าที่ (กคบ.)</option>
+        <option value="executive">📋 ผู้บริหาร/คณะกรรมการ</option>
+        <option value="admin">👑 ผู้ดูแลระบบ</option>
+      </select></div>
     </div>
     <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('addUserModal')">ยกเลิก</button><button class="btn btn-success" onclick="saveUser()">💾 บันทึก</button></div>
   </div>
@@ -1146,16 +1225,50 @@ function checkSession(){
     CURRENT_USER=data;return true;
   }catch(e){localStorage.removeItem('fossilSession');return false;}
 }
-function isAdmin(){return CURRENT_USER&&CURRENT_USER.role==='admin';}
+// ★ RBAC 4 roles
+const ROLE_LABELS = {
+  admin:        '👑 ผู้ดูแลระบบ',
+  executive:    '📋 ผู้บริหาร/คณะกรรมการ',
+  officer:      '🏛️ เจ้าหน้าที่ (กคบ.)',
+  projectowner: '👤 เจ้าของโครงการ',
+};
+function getUserRole(){ return (CURRENT_USER?.role||'').toLowerCase(); }
+function isAdmin(){     return getUserRole()==='admin'; }
+function isExecutive(){ return getUserRole()==='executive'; }
+function isOfficer(){   return getUserRole()==='officer'; }
+function isProjectOwner(){ return getUserRole()==='projectowner'; }
+// isReadOnly: ดูได้อย่างเดียว (Executive ไม่แก้ไขได้)
+function isReadOnly(){ return isExecutive(); }
+// canSeeAllProjects: เห็นทุกโครงการ (Admin, Executive, Officer)
+function canSeeAllProjects(){ return isAdmin()||isExecutive()||isOfficer(); }
+// canViewProject: ตรวจสิทธิ์ดูโครงการนี้ไหม
+function canViewProject(projectId){
+  if(canSeeAllProjects()) return true;
+  const m=(DB.userAccessMap||{})[CURRENT_USER?.id||''];
+  return !!(m&&m[projectId]&&m[projectId].canView);
+}
+// canEditProject: ตรวจสิทธิ์แก้ไขโครงการนี้ไหม
+function canEditProject(projectId){
+  if(isAdmin()) return true;
+  if(isReadOnly()) return false;
+  const m=(DB.userAccessMap||{})[CURRENT_USER?.id||''];
+  return !!(m&&m[projectId]&&m[projectId].canEdit);
+}
+function getRoleLabel(role){ return ROLE_LABELS[String(role||'').toLowerCase()]||role||'ผู้ใช้งาน'; }
 function applyRoleUI(){
   if(!CURRENT_USER)return;
-  // Header: avatar name + dropdown menu header
   document.getElementById('userDisplayName').textContent=CURRENT_USER.displayName;
   const umhName=document.getElementById('umhName');if(umhName)umhName.textContent=CURRENT_USER.displayName;
-  const umhRole=document.getElementById('umhRole');if(umhRole)umhRole.textContent=isAdmin()?'👑 ผู้ดูแลระบบ':'👤 ผู้ใช้งานทั่วไป';
-  // Role-based visibility
+  // ★ แสดง role label ถูกต้องสำหรับทุก role
+  const umhRole=document.getElementById('umhRole');if(umhRole)umhRole.textContent=getRoleLabel(getUserRole());
+  // Admin-only elements
   document.querySelectorAll('.admin-only').forEach(el=>el.style.display=isAdmin()?'':'none');
-  if(document.getElementById('settingsTab'))document.getElementById('settingsTab').style.display=isAdmin()?'':'none';
+  // settingsTab — Admin เท่านั้น
+  const _st=document.getElementById('settingsTab');
+  if(_st)_st.style.setProperty('display',isAdmin()?'flex':'none','important');
+  // ★ ซ่อนเมนูกรอกความคืบหน้าถ้าเป็น Executive (ดูอย่างเดียว)
+  const _ut=document.getElementById('updTab');
+  if(_ut)_ut.style.setProperty('display',isReadOnly()?'none':'','important');
   const rep=document.getElementById('updReporter');if(rep)rep.value=CURRENT_USER.displayName;
 }
 
@@ -1268,7 +1381,7 @@ let DB={
   plans:['แผนปฏิบัติการ เรื่องที่ 1: การสำรวจ ศึกษา วิจัยแหล่งซากดึกดำบรรพ์และซากดึกดำบรรพ์','แผนปฏิบัติการ เรื่องที่ 2: การบริหารจัดการแหล่งซากดึกดำบรรพ์และซากดึกดำบรรพ์','แผนปฏิบัติการ เรื่องที่ 3: การพัฒนาแหล่งเรียนรู้ด้านซากดึกดำบรรพ์','แผนปฏิบัติการ เรื่องที่ 4: การพัฒนากฎหมาย'],
   strategies:[],
   indicators:['เป้าหมาย/ตัวชี้วัดที่ 1.1','เป้าหมาย/ตัวชี้วัดที่ 1.2','เป้าหมาย/ตัวชี้วัดที่ 1.3','เป้าหมาย/ตัวชี้วัดที่ 2.1','เป้าหมาย/ตัวชี้วัดที่ 3.1','เป้าหมาย/ตัวชี้วัดที่ 3.2','เป้าหมาย/ตัวชี้วัดที่ 4.1'],
-  alertEmails:[],alertOnStatuses:['ต่ำกว่าแผน','ล่าช้า','วิกฤติ'],users:[],lastUpdated:null
+  alertEmails:[],alertOnStatuses:['ต่ำกว่าแผน','ล่าช้า','วิกฤติ'],users:[],userAccessMap:{},lastUpdated:null
 };
 let pendingFiles={};// keyed by quarter: {1:[], 2:[], 3:[], 4:[]}
 let selectedQuarter=null;
@@ -1313,6 +1426,15 @@ async function pullFromSheets(silent=false){
     try{data=JSON.parse(text);}catch{throw new Error('Apps Script ตอบกลับผิดรูปแบบ');}
     if(!data.ok)throw new Error(data.error||'getAll ล้มเหลว');
     if(Array.isArray(data.orgs))DB.orgs=data.orgs;
+    if(Array.isArray(data.userAccess)){
+      DB.userAccess=data.userAccess;
+      // สร้าง cache สำหรับ access panel
+      _accessCache={};
+      data.userAccess.forEach(a=>{
+        if(!_accessCache[a.userId])_accessCache[a.userId]={};
+        _accessCache[a.userId][a.projectId]={canView:a.canView,canEdit:a.canEdit};
+      });
+    }
     if(Array.isArray(data.projects)){
       // ★ ข้อ 2: เก็บสำเนาโครงการ "ทั้งหมดในระบบ" แบบไม่กรอง ไว้ใช้ในหน้า "โครงการทั้งหมด"
       // (ส่วนล่าง — โครงการของหน่วยงานอื่น) โดยไม่กระทบ DB.projects ที่หน้าอื่น ๆ ยังใช้ scope ตามหน่วยงานเดิม
@@ -1329,6 +1451,7 @@ async function pullFromSheets(silent=false){
     }
     if(Array.isArray(data.updates))DB.updates=data.updates;
     if(Array.isArray(data.plans))DB.plans=data.plans;
+    if(data.userAccessMap)DB.userAccessMap=data.userAccessMap;
     if(Array.isArray(data.strategies))DB.strategies=data.strategies;
     if(Array.isArray(data.indicators))DB.indicators=data.indicators;
     if(Array.isArray(data.alertEmails))DB.alertEmails=data.alertEmails;
@@ -1346,6 +1469,8 @@ async function pushUpdateToSheets(update,project){
   const payload={action:'addUpdate',data:{
     id:update.id,
     timestamp:thaiDate(update.timestamp),
+    userId:CURRENT_USER?.id||'',
+    userRole:getUserRole(),
     projectId:project.id,
     projectName:project.name,
     plan:project.plan||'',
@@ -1432,6 +1557,13 @@ function showPage(id,el){
 
 // ★ A6 fix: sanitizeSheetValue — ป้องกัน Formula Injection ก่อนเขียนลง Google Sheets
 // ค่าที่ขึ้นต้นด้วย = + - @ จะถูกเติม ' นำหน้าเพื่อให้ Sheets อ่านเป็นข้อความธรรมดา
+// ★ RBAC: กรองโครงการที่ user คนนี้มีสิทธิ์ดู
+function getVisibleProjects(){
+  if(canSeeAllProjects()) return DB.projects; // Admin/Executive/Officer เห็นทั้งหมด
+  // ProjectOwner: เฉพาะโครงการที่ canView=true ใน userAccessMap
+  return DB.projects.filter(p=>canViewProject(p.id));
+}
+
 function sanitizeSheetValue(val){
   if(val==null)return val;
   const s=String(val);
@@ -1616,7 +1748,7 @@ function renderDashboard(){
   const yearF=document.getElementById('dashYearFilter').value;const qF=document.getElementById('dashQFilter').value;
   const orgF=document.getElementById('dashOrgFilter')?.value||'';
   const planF=document.getElementById('dashPlanFilter')?.value||'';
-  let projects=DB.projects;if(yearF)projects=projects.filter(p=>String(p.planYear||p.startYear)===String(yearF));
+  let projects=getVisibleProjects();if(yearF)projects=projects.filter(p=>String(p.planYear||p.startYear)===String(yearF));
   // ★ filter หน่วยงาน
   if(orgF)projects=projects.filter(p=>{const ow=(p.owners&&p.owners.length>0)?p.owners:String(p.owner||'').split(/[|\/]/).map(s=>s.trim());return ow.includes(orgF);});
   // ★ ข้อ 1.1: filter แผนปฏิบัติการ
@@ -1689,7 +1821,7 @@ function renderProjectTable(){
   const statusF=document.getElementById('filterStatus')?.value||'';
   const yearF=document.getElementById('filterYear')?.value||'';
   const orgF=document.getElementById('filterOrg')?.value||'';
-  let filtered=DB.projects.filter(p=>{
+  let filtered=getVisibleProjects().filter(p=>{
     const inS=!search||p.name.toLowerCase().includes(search)||(p.owner||'').toLowerCase().includes(search);
     const inP=!planF||p.plan===planF;
     const inSt2=!stratF||(p.strategy||'')===stratF;
@@ -1704,7 +1836,7 @@ function renderProjectTable(){
   tbody.innerHTML=filtered.length?filtered.map((p,idx)=>{
     const prog=yearF?getProgressFiltered(p.id,yearF,''):getProgress(p.id);
     const s=yearF?getStatusFiltered(p.id,yearF,''):getStatus(p.id);
-    const manageBtns=isAdmin()?`<button class="btn btn-sm btn-outline" onclick="viewProject('${p.id}')" title="ดูรายละเอียด">🔍</button><button class="btn btn-sm btn-outline" onclick="editProjectInline('${p.id}')" title="แก้ไข">✏️</button><button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:1px solid #fac5c0;" onclick="deleteProject('${p.id}')" title="ลบ">🗑️</button>`:`<button class="btn btn-sm btn-outline" onclick="viewProject('${p.id}')">🔍 ดู</button>`;
+    const manageBtns=isAdmin()?`<button class="btn btn-sm btn-outline" onclick="viewProject('${p.id}')" title="ดูรายละเอียด">🔍</button><button class="btn btn-sm btn-outline" onclick="editProjectInline('${p.id}')" title="แก้ไข">✏️</button><button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:1px solid #fac5c0;" onclick="deleteProject('${p.id}')" title="ลบ">🗑️</button>`:canEditProject(p.id)?`<button class="btn btn-sm btn-outline" onclick="viewProject('${p.id}')">🔍 ดู</button>`:`<button class="btn btn-sm btn-outline" onclick="viewProject('${p.id}')">🔍 ดู</button>`;
     return `<tr>
       <td class="text-center" style="font-weight:600;color:var(--text-muted);">${idx+1}</td>
       <td style="max-width:220px;"><strong style="cursor:pointer;" onclick="viewProject('${p.id}')">${p.name}</strong><div style="font-size:11px;color:var(--text-muted);margin-top:2px;">${p.plan?p.plan.replace('แผนปฏิบัติการ ',''):'—'}${p.indicator?' · '+p.indicator:''}</div></td>
@@ -1764,7 +1896,7 @@ function renderQuarterlySummary(){
   const indF=document.getElementById('qtrFilterIndicator')?.value||'';
   const projF=document.getElementById('qtrFilterProject')?.value||'';
   const orgF=document.getElementById('qtrFilterOrg')?.value||'';
-  let projects=DB.projects.filter(p=>{
+  let projects=getVisibleProjects().filter(p=>{
     const inY=!yearF||String(p.planYear||p.startYear)===String(yearF);
     const inP=!planF||p.plan===planF;const inSt=!stratF||p.strategy===stratF;
     const inI=!indF||p.indicator===indF;const inPr=!projF||p.id===projF;
@@ -1964,7 +2096,9 @@ function renderProjectPicker(){
   const orgF=document.getElementById('updFilterOrg')?.value||'';
   const statF=document.getElementById('updFilterStatus')?.value||'';
   const clr=document.getElementById('updSearchClear');if(clr)clr.style.display=text?'block':'none';
-  let projects=DB.projects.filter(p=>{
+  // ★ RBAC: หน้ากรอกความคืบหน้า — เฉพาะโครงการที่ canEdit=true (Admin เห็นทั้งหมด)
+  const editableProjects = isAdmin() ? DB.projects : getVisibleProjects().filter(p=>canEditProject(p.id));
+  let projects=editableProjects.filter(p=>{
     const inPlan=!planF||p.plan===planF;
     const inStrat=!stratF||(p.strategy||'')===stratF;
     const inInd=!indF||(p.indicator||'')===indF;
@@ -2304,6 +2438,8 @@ async function submitUpdate(){
   const projectId=document.getElementById('updProjectId').value;
   const reporter=document.getElementById('updReporter').value.trim();
   const year=document.getElementById('updYear').value;
+  if(isReadOnly()){showToast('ผู้บริหาร/คณะกรรมการไม่มีสิทธิ์บันทึกข้อมูล','red');return;}
+  if(!canEditProject(projectId)&&!isAdmin()){showToast('ไม่มีสิทธิ์บันทึกความคืบหน้าของโครงการนี้','red');return;}
   if(!projectId){showToast('กรุณาเลือกโครงการ','red');return;}
   if(!reporter){showToast('กรุณาระบุชื่อผู้รายงาน','red');return;}
   if(!selectedQuarter){showToast('กรุณาเลือกไตรมาสที่ต้องการรายงาน','red');return;}
@@ -2505,9 +2641,165 @@ function renderSettings(){
   document.getElementById('strategyList').innerHTML=strats.length?strats.map((s,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><div style="flex:1;padding:7px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:13px;">${s}</div><button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:1px solid #fac5c0;" onclick="removeStrategy(${i})">✕</button></div>`).join(''):'<p style="font-size:13px;color:var(--text-muted);">ยังไม่มีแนวทางการพัฒนา</p>';
   document.getElementById('indicatorList').innerHTML=DB.indicators.length?DB.indicators.map((ind,i)=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><div style="flex:1;padding:7px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:13px;">${ind}</div><button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:1px solid #fac5c0;" onclick="removeIndicator(${i})">✕</button></div>`).join(''):'<p style="font-size:13px;color:var(--text-muted);">ยังไม่มีเป้าหมาย/ตัวชี้วัด</p>';
   const users=DB.users||[];
-  document.getElementById('userList').innerHTML=users.length?users.map(u=>`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><div style="flex:1;padding:8px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><span>${u.role==='admin'?'👑':'👤'}</span><strong>${u.displayName}</strong><span style="color:var(--text-muted);">(${u.username})</span><span class="badge ${u.role==='admin'?'badge-warning':'badge-info'}">${u.role==='admin'?'Admin':'User'}</span></div><button class="btn btn-sm btn-outline" onclick="editUser('${u.id}')">✏️</button><button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:1px solid #fac5c0;" onclick="deleteUser('${u.id}')">🗑️</button></div>`).join(''):'<p style="font-size:13px;color:var(--text-muted);">ยังไม่มีบัญชีผู้ใช้ — กด Sync เพื่อโหลดจาก Sheets</p>';
+  document.getElementById('userList').innerHTML=users.length?users.map(u=>{
+    const r=(u.role||'').toLowerCase();
+    const badges={admin:'badge-warning',executive:'badge-info',officer:'badge-success',projectowner:'badge-gray'};
+    const bc=badges[r]||'badge-info';
+    return`<div style="display:flex;gap:8px;align-items:center;margin-bottom:8px;"><div style="flex:1;padding:8px 12px;background:#f9fafb;border:1px solid var(--border);border-radius:8px;font-size:13px;display:flex;gap:10px;align-items:center;flex-wrap:wrap;"><strong>${escapeHtml(u.displayName)}</strong><span style="color:var(--text-muted);">(${escapeHtml(u.username)})</span><span class="badge ${bc}" style="font-size:11px;">${getRoleLabel(r)}</span>${u.organization?`<span style="font-size:11px;color:var(--text-muted);">· ${escapeHtml(u.organization)}</span>`:''}</div><button class="btn btn-sm btn-outline" onclick="editUser('${u.id}')">✏️</button><button class="btn btn-sm" style="background:var(--danger-light);color:var(--danger);border:1px solid #fac5c0;" onclick="deleteUser('${u.id}')">🗑️</button></div>`;
+  }).join(''):'<p style="font-size:13px;color:var(--text-muted);">ยังไม่มีบัญชีผู้ใช้ — กด Sync เพื่อโหลดจาก Sheets</p>';
+  // ★ RBAC user list (กำหนดสิทธิ์)
+  renderRbacUserList();
+  // ★ render access user list
+  renderAccessUserList();
   document.getElementById('gsheetsUrl').value=GAS_URL;document.getElementById('gsheetsSID').value=SHEET_ID;
 }
+
+// ═══════════════════════════════════════════════════
+// ACCESS MANAGEMENT
+// ═══════════════════════════════════════════════════
+let _accessCache  = {};   // { userId: { projectId: {canView,canEdit} } }
+let _accessUserId = null;
+
+function renderAccessUserList(){
+  const el = document.getElementById('accessUserListItems');
+  if(!el) return;
+  const users = (DB.users||[]).filter(u => (u.role||'').toLowerCase() !== 'admin');
+  if(!users.length){
+    el.innerHTML='<p style="padding:12px;font-size:12px;color:var(--text-muted);">ยังไม่มีผู้ใช้ (User)</p>';
+    return;
+  }
+  el.innerHTML = users.map(u=>{
+    const isSel = _accessUserId===u.id;
+    return `<div onclick="selectAccessUser('${u.id}')"
+      style="padding:10px 14px;cursor:pointer;border-left:3px solid ${isSel?'var(--primary)':'transparent'};
+             background:${isSel?'var(--primary-pale)':'transparent'};transition:all .15s;"
+      onmouseover="if('${u.id}'!=='${_accessUserId||''}')this.style.background='#f3f4f6'"
+      onmouseout="if('${u.id}'!=='${_accessUserId||''}')this.style.background='transparent'">
+      <div style="font-size:13px;font-weight:600;">${escapeHtml(u.displayName||u.username)}</div>
+      <div style="font-size:11px;color:var(--text-muted);">${escapeHtml(u.organization||'')}</div>
+    </div>`;
+  }).join('');
+}
+
+async function selectAccessUser(userId){
+  _accessUserId = userId;
+  renderAccessUserList();
+  const panel = document.getElementById('accessProjectPanel');
+  panel.innerHTML='<div style="padding:24px;color:var(--text-muted);font-size:13px;">⏳ กำลังโหลดสิทธิ์...</div>';
+  try{
+    // ดึงจาก GAS โดยตรง
+    const res = await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'getUserAccess',data:{userId}})});
+    const data = await res.json();
+    const granted = {};
+    (data.access||[]).forEach(a=>{ granted[a.projectId]={canView:a.canView,canEdit:a.canEdit}; });
+    // รวมกับ cache ที่อาจมีการแก้ไขแล้ว
+    if(!_accessCache[userId]) _accessCache[userId] = granted;
+    else Object.assign(_accessCache[userId], granted);
+    renderAccessProjectPanel(userId);
+  }catch(e){
+    panel.innerHTML=`<div style="padding:24px;color:var(--danger);font-size:13px;">❌ โหลดไม่ได้: ${e.message}</div>`;
+  }
+}
+
+function renderAccessProjectPanel(userId){
+  const panel = document.getElementById('accessProjectPanel');
+  const user  = (DB.users||[]).find(u=>u.id===userId);
+  const cache = _accessCache[userId]||{};
+  const projects = DB.projects||[];
+  const granted = Object.values(cache).filter(a=>a.canView||a.canEdit).length;
+
+  // จัดกลุ่มตามแผน
+  const byPlan={};
+  projects.forEach(p=>{ const k=p.plan||'(ไม่ระบุแผน)'; if(!byPlan[k])byPlan[k]=[]; byPlan[k].push(p); });
+
+  let html=`<div style="padding:10px 14px;background:#f9fafb;border-bottom:1px solid var(--border);
+                        display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;
+                        position:sticky;top:0;z-index:5;">
+    <div>
+      <div style="font-size:13px;font-weight:700;">${escapeHtml(user?.displayName||'')}</div>
+      <div style="font-size:11px;color:var(--text-muted);">กำหนดสิทธิ์แล้ว ${granted} / ${projects.length} โครงการ</div>
+    </div>
+    <div style="display:flex;gap:6px;flex-wrap:wrap;">
+      <button class="btn btn-sm btn-outline" onclick="bulkAccess('${userId}',true,true)">✅ ทั้งหมด</button>
+      <button class="btn btn-sm btn-outline" onclick="bulkAccess('${userId}',true,false)">👁 ดูทั้งหมด</button>
+      <button class="btn btn-sm btn-outline" style="color:var(--danger);" onclick="bulkAccess('${userId}',false,false)">✕ ล้าง</button>
+      <button class="btn btn-sm btn-primary" onclick="saveAccessNow('${userId}')">💾 บันทึก</button>
+    </div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="background:#f3f4f6;border-bottom:2px solid var(--border);">
+      <th style="padding:7px 14px;text-align:left;font-size:11px;color:var(--text-muted);">ชื่อโครงการ</th>
+      <th style="padding:7px 8px;text-align:center;font-size:11px;color:var(--text-muted);width:65px;">👁 ดูได้</th>
+      <th style="padding:7px 8px;text-align:center;font-size:11px;color:var(--text-muted);width:75px;">✏️ แก้ไข</th>
+    </tr></thead><tbody>`;
+
+  let idx=0;
+  Object.keys(byPlan).sort().forEach(plan=>{
+    html+=`<tr><td colspan="3" style="padding:6px 14px 3px;font-size:11px;font-weight:700;color:var(--primary);background:var(--primary-pale);">${escapeHtml(plan)}</td></tr>`;
+    byPlan[plan].forEach(p=>{
+      const a=cache[p.id]||{canView:false,canEdit:false};
+      const rowBg=(a.canView||a.canEdit)?'#f0fff4':'#fff';
+      html+=`<tr style="background:${rowBg};border-bottom:1px solid #f0f0f0;"
+              onmouseover="this.style.background='#e8f4f0'" onmouseout="this.style.background='${rowBg}'">
+        <td style="padding:7px 14px;">
+          <div style="font-size:12.5px;">${escapeHtml(p.name)}</div>
+          <div style="font-size:10px;color:var(--text-muted);">${escapeHtml(p.planYear||'')}</div>
+        </td>
+        <td style="text-align:center;">
+          <input type="checkbox" ${a.canView?'checked':''} data-uid="${userId}" data-pid="${p.id}" data-type="view"
+            onchange="onAccessToggle(this)" style="width:15px;height:15px;accent-color:var(--primary);cursor:pointer;">
+        </td>
+        <td style="text-align:center;">
+          <input type="checkbox" ${a.canEdit?'checked':''} data-uid="${userId}" data-pid="${p.id}" data-type="edit"
+            onchange="onAccessToggle(this)" style="width:15px;height:15px;accent-color:var(--success);cursor:pointer;">
+        </td>
+      </tr>`;
+      idx++;
+    });
+  });
+  html+='</tbody></table>';
+  panel.innerHTML=html;
+}
+
+function onAccessToggle(cb){
+  const {uid,pid,type}=cb.dataset;
+  if(!_accessCache[uid]) _accessCache[uid]={};
+  if(!_accessCache[uid][pid]) _accessCache[uid][pid]={canView:false,canEdit:false};
+  if(type==='view'){
+    _accessCache[uid][pid].canView=cb.checked;
+    if(!cb.checked){ _accessCache[uid][pid].canEdit=false; const e=document.querySelector(`input[data-uid="${uid}"][data-pid="${pid}"][data-type="edit"]`);if(e)e.checked=false; }
+  }
+  if(type==='edit'){
+    _accessCache[uid][pid].canEdit=cb.checked;
+    if(cb.checked){ _accessCache[uid][pid].canView=true; const v=document.querySelector(`input[data-uid="${uid}"][data-pid="${pid}"][data-type="view"]`);if(v)v.checked=true; }
+  }
+  // อัปเดตสีแถว
+  const row=cb.closest('tr');if(row){const a=_accessCache[uid][pid];row.style.background=(a.canView||a.canEdit)?'#f0fff4':'#fff';}
+}
+
+function bulkAccess(userId,canView,canEdit){
+  if(!_accessCache[userId])_accessCache[userId]={};
+  (DB.projects||[]).forEach(p=>{
+    _accessCache[userId][p.id]={canView,canEdit};
+    const v=document.querySelector(`input[data-uid="${userId}"][data-pid="${p.id}"][data-type="view"]`);
+    const e=document.querySelector(`input[data-uid="${userId}"][data-pid="${p.id}"][data-type="edit"]`);
+    if(v)v.checked=canView; if(e)e.checked=canEdit;
+    const row=v?.closest('tr')||e?.closest('tr');if(row)row.style.background=(canView||canEdit)?'#f0fff4':'#fff';
+  });
+}
+
+async function saveAccessNow(userId){
+  const cache=_accessCache[userId]||{};
+  const accesses=Object.keys(cache).filter(pid=>cache[pid].canView||cache[pid].canEdit)
+    .map(pid=>({projectId:pid,canView:cache[pid].canView,canEdit:cache[pid].canEdit}));
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveUserAccess',data:{userId,accesses}})});
+    const r=await res.json();
+    if(r.ok){ showToast(`✅ บันทึกสิทธิ์ ${accesses.length} โครงการสำหรับ ${(DB.users||[]).find(u=>u.id===userId)?.displayName||''}`); }
+    else showToast('❌ '+(r.error||'บันทึกไม่สำเร็จ'),'red');
+  }catch(e){showToast('❌ '+e.message,'red');}
+}
+
 async function addOrg(){
   const v=document.getElementById('newOrg').value.trim();if(!v)return;
   if(!DB.orgs)DB.orgs=[];
@@ -2538,7 +2830,136 @@ async function testGSheetsConn(){
 }
 
 // User management
-function openAddUser(){document.getElementById('editUserId').value='';document.getElementById('addUserTitle').textContent='เพิ่มบัญชีผู้ใช้';['uUsername','uDisplayName','uPassword','uOrganization','uEmail'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('uRole').value='user';const pwHint=document.getElementById('uPasswordHint');if(pwHint)pwHint.style.display='none';openModal('addUserModal');}
+function openAddUser(){document.getElementById('editUserId').value='';document.getElementById('addUserTitle').textContent='เพิ่มบัญชีผู้ใช้';['uUsername','uDisplayName','uPassword','uOrganization','uEmail'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});document.getElementById('uRole').value='projectowner';const pwHint=document.getElementById('uPasswordHint');if(pwHint)pwHint.style.display='none';openModal('addUserModal');}
+function editUser(id){const u=(DB.users||[]).find(x=>x.id===id);if(!u)return;document.getElementById('editUserId').value=id;document.getElementById('addUserTitle').textContent='แก้ไขบัญชีผู้ใช้';document.getElementById('uUsername').value=u.username||'';document.getElementById('uDisplayName').value=u.displayName||'';document.getElementById('uPassword').value='';document.getElementById('uRole').value=(u.role||'projectowner').toLowerCase();const org=document.getElementById('uOrganization');if(org)org.value=u.organization||'';const em=document.getElementById('uEmail');if(em)em.value=u.email||'';const pwHint=document.getElementById('uPasswordHint');if(pwHint)pwHint.style.display='block';openModal('addUserModal');}
+
+// ═══════════════════════════════════════════════════
+// ★ RBAC ACCESS MANAGEMENT
+// ═══════════════════════════════════════════════════
+let _rbacUserId = null;
+let _rbacCache  = {}; // {projectId: {canView, canEdit}}
+
+function renderRbacUserList(){
+  const el = document.getElementById('rbacUserList');
+  if(!el) return;
+  const eligible = (DB.users||[]).filter(u=>u.role==='officer'||u.role==='projectowner');
+  if(!eligible.length){
+    el.innerHTML='<p style="padding:12px;font-size:12px;color:var(--text-muted);">ยังไม่มีผู้ใช้ในบทบาท<br>เจ้าหน้าที่หรือเจ้าของโครงการ</p>';
+    return;
+  }
+  el.innerHTML=eligible.map(u=>{
+    const isSel=_rbacUserId===u.id;
+    const rc=u.role==='officer'?'var(--success)':'var(--text-muted)';
+    return`<div onclick="selectRbacUser('${u.id}')" style="padding:10px 14px;cursor:pointer;border-left:3px solid ${isSel?'var(--primary)':'transparent'};background:${isSel?'var(--primary-pale)':'transparent'};transition:.15s;">
+      <div style="font-size:13px;font-weight:600;">${escapeHtml(u.displayName||u.username)}</div>
+      <div style="font-size:11px;color:${rc};">${getRoleLabel(u.role)}</div>
+    </div>`;
+  }).join('');
+}
+
+async function selectRbacUser(userId){
+  _rbacUserId=userId; _rbacCache={};
+  renderRbacUserList();
+  const panel=document.getElementById('rbacProjectPanel');
+  panel.innerHTML='<div style="padding:20px;color:var(--text-muted);font-size:13px;">⏳ กำลังโหลด...</div>';
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'getUserAccess',data:{userId}})});
+    const json=await res.json();
+    if(json.ok) _rbacCache=json.accessMap||{};
+  }catch(e){}
+  renderRbacProjectPanel();
+}
+
+function renderRbacProjectPanel(){
+  const panel=document.getElementById('rbacProjectPanel');
+  if(!panel||!_rbacUserId)return;
+  const user=(DB.users||[]).find(u=>u.id===_rbacUserId);
+  const isOfficerRole=user?.role==='officer';
+
+  const byPlan={};
+  (DB.projects||[]).forEach(p=>{const k=p.plan||'(ไม่ระบุแผน)';if(!byPlan[k])byPlan[k]=[];byPlan[k].push(p);});
+  const granted=Object.values(_rbacCache).filter(a=>a.canView||a.canEdit).length;
+
+  let h=`<div style="padding:10px 16px;background:#f9fafb;border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;position:sticky;top:0;z-index:5;">
+    <div>
+      <div style="font-size:13px;font-weight:700;">${escapeHtml(user?.displayName||'')} <span style="font-size:11px;font-weight:400;color:var(--text-muted);">${getRoleLabel(user?.role)}</span></div>
+      ${isOfficerRole?'<div style="font-size:11px;color:var(--success);">เห็นทุกโครงการอัตโนมัติ — กำหนดได้ว่าโครงการไหนแก้ไขได้</div>':`<div style="font-size:11px;color:var(--text-muted);">กำหนดสิทธิ์แล้ว ${granted}/${(DB.projects||[]).length} โครงการ</div>`}
+    </div>
+    <div style="display:flex;gap:5px;flex-wrap:wrap;">
+      ${!isOfficerRole?`<button class="btn btn-sm btn-outline" onclick="rbacBulk(true,true)">✅ เลือกทั้งหมด</button>
+      <button class="btn btn-sm btn-outline" onclick="rbacBulk(true,false)">👁 ดูทั้งหมด</button>
+      <button class="btn btn-sm btn-outline" style="color:var(--danger);" onclick="rbacBulk(false,false)">✕ ล้าง</button>`
+      :`<button class="btn btn-sm btn-outline" onclick="rbacBulk(true,true)">✏️ ให้แก้ไขทั้งหมด</button>
+      <button class="btn btn-sm btn-outline" style="color:var(--danger);" onclick="rbacBulk(true,false)">✕ ถอนสิทธิ์แก้ไข</button>`}
+      <button class="btn btn-sm btn-primary" onclick="saveRbacAccess()">💾 บันทึก</button>
+    </div>
+  </div>
+  <table style="width:100%;border-collapse:collapse;font-size:13px;">
+    <thead><tr style="background:#f3f4f6;border-bottom:2px solid var(--border);">
+      <th style="padding:7px 14px;text-align:left;font-size:11px;color:var(--text-muted);">ชื่อโครงการ</th>
+      ${!isOfficerRole?'<th style="padding:7px 8px;text-align:center;font-size:11px;color:var(--text-muted);width:60px;">👁 ดูได้</th>':''}
+      <th style="padding:7px 8px;text-align:center;font-size:11px;color:var(--text-muted);width:70px;">✏️ แก้ไข</th>
+    </tr></thead><tbody>`;
+
+  Object.keys(byPlan).sort().forEach(plan=>{
+    h+=`<tr><td colspan="${isOfficerRole?2:3}" style="padding:6px 14px 3px;font-size:11px;font-weight:700;color:var(--primary);background:var(--primary-pale);border-top:1px solid var(--border);">${escapeHtml(plan)}</td></tr>`;
+    byPlan[plan].forEach((p,i)=>{
+      const acc=_rbacCache[p.id]||{canView:false,canEdit:false};
+      const bg=(acc.canView||acc.canEdit)?'#f0fff4':(i%2?'#f9fafb':'#fff');
+      h+=`<tr style="background:${bg};border-bottom:1px solid #f0f0f0;" onmouseover="this.style.background='#e8f4f0'" onmouseout="this.style.background='${bg}'">
+        <td style="padding:7px 14px;">${escapeHtml(p.name)}<span style="font-size:11px;color:var(--text-muted);margin-left:6px;">${p.planYear||''}</span></td>
+        ${!isOfficerRole?`<td style="text-align:center;"><input type="checkbox" ${acc.canView?'checked':''} data-pid="${p.id}" data-t="view" onchange="onRbacToggle(this)" style="width:15px;height:15px;accent-color:var(--primary);cursor:pointer;"></td>`:''}
+        <td style="text-align:center;"><input type="checkbox" ${acc.canEdit?'checked':''} data-pid="${p.id}" data-t="edit" onchange="onRbacToggle(this)" style="width:15px;height:15px;accent-color:var(--success);cursor:pointer;"></td>
+      </tr>`;
+    });
+  });
+  h+='</tbody></table>';
+  panel.innerHTML=h;
+}
+
+function onRbacToggle(cb){
+  const pid=cb.dataset.pid,t=cb.dataset.t;
+  if(!_rbacCache[pid])_rbacCache[pid]={canView:false,canEdit:false};
+  if(t==='view'){
+    _rbacCache[pid].canView=cb.checked;
+    if(!cb.checked){_rbacCache[pid].canEdit=false;const ec=document.querySelector(`input[data-pid="${pid}"][data-t="edit"]`);if(ec)ec.checked=false;}
+  }
+  if(t==='edit'){
+    _rbacCache[pid].canEdit=cb.checked;
+    if(cb.checked){_rbacCache[pid].canView=true;const vc=document.querySelector(`input[data-pid="${pid}"][data-t="view"]`);if(vc)vc.checked=true;}
+  }
+  const row=cb.closest('tr');if(row){const a=_rbacCache[pid];row.style.background=(a.canView||a.canEdit)?'#f0fff4':'#fff';}
+}
+
+function rbacBulk(canView,canEdit){
+  (DB.projects||[]).forEach(p=>{
+    _rbacCache[p.id]={canView,canEdit};
+    const vc=document.querySelector(`input[data-pid="${p.id}"][data-t="view"]`);
+    const ec=document.querySelector(`input[data-pid="${p.id}"][data-t="edit"]`);
+    if(vc)vc.checked=canView;if(ec)ec.checked=canEdit;
+    const row=vc?.closest('tr')||ec?.closest('tr');
+    if(row)row.style.background=(canView||canEdit)?'#f0fff4':'#fff';
+  });
+}
+
+async function saveRbacAccess(){
+  if(!_rbacUserId){showToast('กรุณาเลือกผู้ใช้ก่อน','red');return;}
+  const accesses=Object.keys(_rbacCache)
+    .filter(pid=>_rbacCache[pid].canView||_rbacCache[pid].canEdit)
+    .map(pid=>({projectId:pid,canView:_rbacCache[pid].canView,canEdit:_rbacCache[pid].canEdit}));
+  try{
+    const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveUserAccess',data:{userId:_rbacUserId,accesses,assignedBy:CURRENT_USER?.username||''}})});
+    const json=await res.json();
+    if(json.ok){
+      // อัปเดต DB.userAccessMap local cache
+      if(!DB.userAccessMap)DB.userAccessMap={};
+      DB.userAccessMap[_rbacUserId]={};
+      accesses.forEach(a=>{DB.userAccessMap[_rbacUserId][a.projectId]={canView:a.canView,canEdit:a.canEdit};});
+      showToast(`✅ บันทึกสิทธิ์ ${accesses.length} โครงการ สำหรับ ${(DB.users||[]).find(u=>u.id===_rbacUserId)?.displayName||''}`);
+      renderRbacProjectPanel();
+    } else showToast('❌ '+(json.error||'บันทึกล้มเหลว'),'red');
+  }catch(e){showToast('❌ '+e.message,'red');}
+}
 function editUser(id){const u=(DB.users||[]).find(x=>x.id===id);if(!u)return;document.getElementById('editUserId').value=id;document.getElementById('addUserTitle').textContent='แก้ไขบัญชีผู้ใช้';document.getElementById('uUsername').value=u.username||'';document.getElementById('uDisplayName').value=u.displayName||'';document.getElementById('uPassword').value='';document.getElementById('uRole').value=u.role||'user';const org=document.getElementById('uOrganization');if(org)org.value=u.organization||'';const em=document.getElementById('uEmail');if(em)em.value=u.email||'';const pwHint=document.getElementById('uPasswordHint');if(pwHint)pwHint.style.display='block';openModal('addUserModal');}
 async function saveUser(){const id=document.getElementById('editUserId').value;const username=document.getElementById('uUsername').value.trim();const displayName=document.getElementById('uDisplayName').value.trim();const password=document.getElementById('uPassword').value;const role=document.getElementById('uRole').value;const organization=document.getElementById('uOrganization')?.value.trim()||'';const email=document.getElementById('uEmail')?.value.trim()||'';if(!username||!displayName||(!id&&!password)){alert('กรุณากรอกให้ครบ');return;}if(password&&password.length<4){alert('รหัสผ่านอย่างน้อย 4 ตัว');return;}if((DB.users||[]).find(u=>u.username===username&&u.id!==id)){alert('ชื่อผู้ใช้นี้มีอยู่แล้ว');return;}const payload={id:id||undefined,username,displayName,password:password||undefined,role,organization,email};try{const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'saveUser',data:payload})});const json=await res.json();if(!json.ok)throw new Error(json.error||'บันทึกล้มเหลว');closeModal('addUserModal');showToast('บันทึกบัญชีผู้ใช้แล้ว ✅');await pullFromSheets(true);renderSettings();}catch(e){showToast('บันทึกล้มเหลว: '+e.message,'red');}}
 async function deleteUser(id){if(!confirm('ลบบัญชีนี้?'))return;try{const res=await fetch(GAS_URL,{method:'POST',body:JSON.stringify({action:'deleteUser',data:{id}})});const json=await res.json();if(!json.ok)throw new Error(json.error||'ลบล้มเหลว');DB.users=(DB.users||[]).filter(u=>u.id!==id);saveLocalCache();renderSettings();showToast('ลบบัญชีแล้ว');}catch(e){showToast('ลบล้มเหลว: '+e.message,'red');}}
