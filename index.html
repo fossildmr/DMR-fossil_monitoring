@@ -396,7 +396,7 @@ select.form-control{cursor:pointer}
 <!-- ═══════════ LOADING OVERLAY ═══════════ -->
 <div id="loadingOverlay" style="display:none;">
   <div class="spinner"></div>
-  <p id="loadingMsg">กำลังโหลดข้อมูลจาก Google Sheets...</p>
+  <p id="loadingMsg">กำลังโหลดข้อมูล กรุณารอสักครู่...</p>
   <small id="loadingSub">กรุณารอสักครู่</small>
 </div>
 
@@ -1414,7 +1414,7 @@ async function pullFromSheets(silent=false){
     DB.lastUpdated=Date.now();saveLocalCache();
     setConnStatus('ok','✅ ซิงก์แล้ว '+thaiTime(Date.now()));
     renderDashboard();renderProjectTable();checkAlertDot();
-    if(!silent)showToast('โหลดข้อมูลล่าสุดจาก Google Sheets สำเร็จ ✅');
+    if(!silent)showToast('โหลดข้อมูลล่าสุด สำเร็จ ✅');
   }catch(e){setConnStatus('err','❌ โหลดล้มเหลว — ใช้ข้อมูลในเครื่อง');if(!silent)showToast('⚠️ โหลดจาก Sheets ไม่ได้: '+e.message,'red');}
   finally{hideLoading();}
 }
@@ -2284,7 +2284,7 @@ function renderQuarterCards(p,year){
             <textarea class="form-control" id="upd_solution_${q}" rows="2" placeholder="แนวทางแก้ไขหรือข้อเสนอแนะ">${hasExisting?existing.solution||'':''}</textarea>
           </div>
           <div class="form-group" style="margin-bottom:0">
-            <label class="form-label" style="font-size:12px;">📎 แนบไฟล์หลักฐาน (อัพโหลด Google Drive)</label>
+            <label class="form-label" style="font-size:12px;">📎 แนบไฟล์หลักฐาน</label>
             <div class="file-drop" id="filedrop_${q}" onclick="document.getElementById('fileinput_${q}').click()" ondragover="dragOver(event)" ondragleave="dragLeave(event,'filedrop_${q}')" ondrop="dropFile(event,${q})" style="padding:12px;">
               <div style="font-size:22px;">☁️</div>
               <p><strong>คลิกหรือลากไฟล์มาวางที่นี่</strong></p>
